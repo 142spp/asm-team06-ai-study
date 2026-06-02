@@ -9,8 +9,25 @@
 
 ## 2. Pull Request
 
-- 모든 기능은 각 브랜치에서 진행하며, 완료 시 `main`브랜치로 PR을 보냅니다.
-- PR 템플릿을 사용합니다.
+- 각 브랜치에서 작업하며, 완료 시 `main`브랜치로 PR을 보냅니다.
+
+### 구조
+
+```text
+
+<태그>: 변경 사항 요약
+
+ex) feat: add something
+
+```
+
+### 태그 종류
+
+- feat
+- fix
+- docs
+- refactor
+- test
 
 ## 3. Commit
 
