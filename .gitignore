@@ -14,3 +14,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Windows ADS 메타데이터(WSL)
+*:Zone.Identifier
