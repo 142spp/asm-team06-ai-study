@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# uv / venv
+.venv/
+
+# env
+.env*
+
+# 로컬 저장소(데모용)
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
