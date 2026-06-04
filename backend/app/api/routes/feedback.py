@@ -38,7 +38,7 @@ class AnalyzeResponse(BaseModel):
 class ConfirmRequest(BaseModel):
     session_id: str
     log_id: int
-    action: Literal["save", "dismiss"]
+    action: Literal["save", "one_time", "dismiss"]
     candidates: list[Candidate]  # 사용자가 앞으로 적용하기로 선택한 후보 (일부만 가능)
 
 
@@ -81,7 +81,7 @@ async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
     final_output = log["modified"] if log else {}
     verified = verify_result(final_output)
 
-    if body.action == "dismiss" or not body.candidates:
+    if body.action in ("dismiss", "one_time") or not body.candidates:
         return ConfirmResponse(
             session_id=body.session_id,
             saved=False,
