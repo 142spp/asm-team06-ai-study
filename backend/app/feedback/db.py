@@ -72,6 +72,22 @@ def save_user_preference(field: str, original_pattern: Any, preferred: Any) -> N
         )
 
 
+def get_candidate_log(log_id: int) -> dict[str, Any] | None:
+    with _get_conn() as conn:
+        row = conn.execute(
+            "SELECT session_id, original, modified, pattern_type FROM preference_candidate_log WHERE id = ?",
+            (log_id,),
+        ).fetchone()
+    if row is None:
+        return None
+    return {
+        "session_id": row[0],
+        "original": json.loads(row[1]),
+        "modified": json.loads(row[2]),
+        "pattern_type": row[3],
+    }
+
+
 def load_user_preferences() -> list[dict[str, Any]]:
     with _get_conn() as conn:
         rows = conn.execute(
