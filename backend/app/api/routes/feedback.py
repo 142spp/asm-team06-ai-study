@@ -42,12 +42,20 @@ class ConfirmRequest(BaseModel):
     candidates: list[Candidate]  # 사용자가 앞으로 적용하기로 선택한 후보 (일부만 가능)
 
 
+class ResultSummary(BaseModel):
+    total_candidates: int   # 분석된 선호 후보 수
+    saved_count: int        # 실제 저장된 선호 수
+    saved_fields: list[str] # 저장된 필드 목록
+    action_taken: Literal["save", "one_time", "dismiss"]
+    message: str            # 사람이 읽을 수 있는 처리 결과 메시지
+
+
 class ConfirmResponse(BaseModel):
     session_id: str
     saved: bool
-    saved_fields: list[str]       # 저장된 선호 필드 목록 (dismiss 시 빈 리스트)
-    final_output: dict[str, Any]  # 최종 수정안 요약
-    verified: bool                # 최종 결과값 유효성 확인 결과
+    final_output: dict[str, Any]
+    verified: bool
+    summary: ResultSummary
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
@@ -81,13 +89,26 @@ async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
     final_output = log["modified"] if log else {}
     verified = verify_result(final_output)
 
+    total = len(body.candidates)
+
     if body.action in ("dismiss", "one_time") or not body.candidates:
+        message = (
+            "이번에만 적용하고 저장하지 않았습니다."
+            if body.action == "one_time"
+            else "수정 사항을 무시했습니다."
+        )
         return ConfirmResponse(
             session_id=body.session_id,
             saved=False,
-            saved_fields=[],
             final_output=final_output,
             verified=verified,
+            summary=ResultSummary(
+                total_candidates=total,
+                saved_count=0,
+                saved_fields=[],
+                action_taken=body.action,
+                message=message,
+            ),
         )
 
     for candidate in body.candidates:
@@ -97,10 +118,17 @@ async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
             preferred=candidate.preferred,
         )
 
+    saved_fields = [c.field for c in body.candidates]
     return ConfirmResponse(
         session_id=body.session_id,
         saved=True,
-        saved_fields=[c.field for c in body.candidates],
         final_output=final_output,
         verified=verified,
+        summary=ResultSummary(
+            total_candidates=total,
+            saved_count=len(saved_fields),
+            saved_fields=saved_fields,
+            action_taken="save",
+            message=f"{len(saved_fields)}개 선호가 저장되었습니다: {', '.join(saved_fields)}",
+        ),
     )
