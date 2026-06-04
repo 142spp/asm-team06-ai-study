@@ -10,6 +10,7 @@ from app.feedback.db import (
     save_candidate_log,
     save_user_preference,
 )
+from app.feedback.verifier import verify_result
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -46,6 +47,7 @@ class ConfirmResponse(BaseModel):
     saved: bool
     saved_fields: list[str]       # 저장된 선호 필드 목록 (dismiss 시 빈 리스트)
     final_output: dict[str, Any]  # 최종 수정안 요약
+    verified: bool                # 최종 결과값 유효성 확인 결과
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
@@ -77,6 +79,7 @@ async def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
 async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
     log = get_candidate_log(body.log_id)
     final_output = log["modified"] if log else {}
+    verified = verify_result(final_output)
 
     if body.action == "dismiss" or not body.candidates:
         return ConfirmResponse(
@@ -84,6 +87,7 @@ async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
             saved=False,
             saved_fields=[],
             final_output=final_output,
+            verified=verified,
         )
 
     for candidate in body.candidates:
@@ -98,4 +102,5 @@ async def confirm_preference(body: ConfirmRequest) -> ConfirmResponse:
         saved=True,
         saved_fields=[c.field for c in body.candidates],
         final_output=final_output,
+        verified=verified,
     )
