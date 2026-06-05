@@ -13,7 +13,7 @@ import json
 import os
 from datetime import date
 
-from app.schemas.item import ContextBundle
+from app.schemas.analysis import ContextBundle
 
 _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하는 분석기다.
 반드시 아래 JSON 스키마만 출력한다(설명/마크다운 금지).

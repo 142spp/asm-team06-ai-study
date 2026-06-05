@@ -6,7 +6,7 @@ LLM 없이 단위 테스트가 가능하도록 순수 함수로 작성한다.
 """
 
 from app.analysis import config
-from app.schemas.item import LABELS, AnalyzeResult, LLMItem, LLMOutput
+from app.schemas.analysis import LABELS, AnalyzeResult, LLMItem, LLMOutput
 from app.schemas.items import Item, ItemType, ToolName
 
 

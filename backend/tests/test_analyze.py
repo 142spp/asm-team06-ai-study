@@ -9,7 +9,7 @@ from app.analysis.completeness import finalize_item
 from app.analysis.pipeline import analyze
 from app.llm.fake import FakeLLM
 from app.llm.solar import _extract_json
-from app.schemas.item import ContextBundle, LLMItem, LLMOutput
+from app.schemas.analysis import ContextBundle, LLMItem, LLMOutput
 
 BASE = "2026-06-05"
 

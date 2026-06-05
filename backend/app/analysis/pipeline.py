@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from app.analysis.completeness import finalize
 from app.llm.base import LLMClient, get_llm
-from app.schemas.item import AnalyzeResult, ContextBundle, Item, LLMOutput
+from app.schemas.analysis import AnalyzeResult, ContextBundle, Item, LLMOutput
 from app.schemas.items import ItemType, ToolName
 
 _KOREAN_WEEKDAYS = {

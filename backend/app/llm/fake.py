@@ -5,7 +5,7 @@ planning.md 필수 시나리오를 키워드로 식별해 결정적 JSON을 돌�
 입력 유형 라벨은 두지 않는다(실행 항목 없으면 items=[]).
 """
 
-from app.schemas.item import ContextBundle
+from app.schemas.analysis import ContextBundle
 
 
 class FakeLLM:

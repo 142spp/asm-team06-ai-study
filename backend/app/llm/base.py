@@ -9,7 +9,7 @@
 import os
 from typing import Protocol
 
-from app.schemas.item import ContextBundle
+from app.schemas.analysis import ContextBundle
 
 
 class LLMClient(Protocol):

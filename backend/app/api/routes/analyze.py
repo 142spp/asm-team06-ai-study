@@ -9,7 +9,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.analysis.pipeline import analyze
-from app.schemas.item import AnalyzeResult
+from app.schemas.analysis import AnalyzeResult
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 

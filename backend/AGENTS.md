@@ -11,6 +11,7 @@ FastAPI + LangGraph 기반 Action Router Agent 백엔드. backend 단독 uv 프�
 - `app/analysis/` - 6-1 분석 파이프라인(Context stub -> LLM -> 검증/재시도 -> completeness).
 - `app/llm/` - Solar/FakeLLM 클라이언트. `UPSTAGE_API_KEY` 없으면 FakeLLM 폴백.
 - `app/schemas/items.py` - 6-1 출력이자 6-2 입력인 공통 Item 정본.
+- `app/schemas/analysis.py` - 6-1 내부 LLM raw JSON / Context / AnalyzeResult 스키마.
 - `app/conflict/`, `app/storage/`, `app/tools/` - 6-2 라우팅 기반 모듈(충돌검사, SQLite, Local Tool).
 
 ## 실행 (레포 루트 셸에서)
