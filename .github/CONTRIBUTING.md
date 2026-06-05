@@ -51,5 +51,5 @@ ex) feat: add something
 
 ## 4. Code Style & Formatting
 
-- **들여쓰기**: `Tab`을 사용하며 `Tab`단위는 `4 Spaces`로 통일합니다.
+- **들여쓰기**: Python은 PEP8을 따라 `4 Spaces`로 통일합니다. (Tab 문자는 사용하지 않습니다.)
 - **코드정리**: Commit & PR 전, 사용되지 않는 코드 제거 및 정렬합니다.
