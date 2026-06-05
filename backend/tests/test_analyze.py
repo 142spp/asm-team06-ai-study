@@ -3,6 +3,8 @@
 실행: uv run --directory backend python tests/test_analyze.py
 """
 
+from datetime import date
+
 from app.analysis.completeness import finalize_item
 from app.analysis.pipeline import analyze
 from app.llm.fake import FakeLLM
@@ -21,19 +23,22 @@ def test_scenario1_multi_item():
     assert len(r.items) == 4
     assert [i.type for i in r.items] == ["task", "task", "task", "calendar"]
     assert all(not i.needs_confirmation for i in r.items)  # 전부 명확
+    assert all(i.due_date == date(2026, 6, 6) for i in r.items[:3])
+    assert all(i.date is None for i in r.items[:3])         # task 마감은 due_date
     assert r.items[3].all_day is False                     # 일정에 time 있음
+    assert r.items[3].date == date(2026, 6, 12)
 
 
 def test_scenario2_vague_calendar_and_risk():
     r = _run("다음 주쯤 멘토님께 보여드리고, 안 되면 캘린더 연동은 Mock으로 대체하자.")
-    cal = next(i for i in r.items if i.type == "calendar")
+    pending = next(i for i in r.items if i.type == "pending")
     risk = next(i for i in r.items if i.type == "risk")
     # 모호 일정(날짜 vague, calendar 필수) → 정보 부족으로 확인 필요
-    assert cal.needs_confirmation is True
-    assert cal.confirmation_reason == "정보 부족"
-    assert cal.clarification_question is not None
-    assert cal.all_day is True            # 날짜 없는 calendar → all_day
-    assert cal.confidence <= 0.7
+    assert pending.needs_confirmation is True
+    assert pending.recommended_tool == "save_to_pending"
+    assert pending.clarification_question is not None
+    assert pending.date is None
+    assert pending.confidence <= 0.7
     assert risk.needs_confirmation is False
 
 
@@ -52,7 +57,9 @@ def test_low_certainty_branches_to_class_ambiguous():
         date_status="missing", required_ok=True,
     ))
     assert item.needs_confirmation is True
-    assert item.confirmation_reason == "분류 애매"   # 분류가 먼저, 완성도는 안 봄
+    assert item.type == "pending"
+    assert item.recommended_tool == "save_to_pending"
+    assert "유형" in item.clarification_question   # 분류가 먼저, 완성도는 안 봄
 
 
 def test_no_action_items_is_empty():
@@ -140,7 +147,7 @@ def test_invalid_json_twice_falls_back_to_pending():
     r = analyze(raw_text="원문", base_date=BASE, llm=llm)
     assert llm.calls == 2
     assert len(r.items) == 1
-    assert r.items[0].type is None
+    assert r.items[0].type == "pending"
     assert r.items[0].recommended_tool == "save_to_pending"
     assert r.items[0].needs_confirmation is True
 
@@ -162,7 +169,7 @@ def test_next_weekday_is_normalized_from_base_date():
             }]}
 
     r = analyze(raw_text="다음 주 화요일 오전 10시에 팀 회의 잡자.", base_date=BASE, llm=WrongDate())
-    assert r.items[0].date == "2026-06-09"
+    assert r.items[0].date == date(2026, 6, 9)
 
 
 def test_vague_date_does_not_keep_invented_date():

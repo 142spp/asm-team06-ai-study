@@ -6,7 +6,8 @@ LLM 없이 단위 테스트가 가능하도록 순수 함수로 작성한다.
 """
 
 from app.analysis import config
-from app.schemas.item import LABELS, AnalyzeResult, Item, LLMItem, LLMOutput
+from app.schemas.item import LABELS, AnalyzeResult, LLMItem, LLMOutput
+from app.schemas.items import Item, ItemType, ToolName
 
 
 def _completeness_score(item: LLMItem) -> float:
@@ -66,16 +67,37 @@ def finalize_item(item: LLMItem) -> Item:
         needs_confirmation, reason = True, "정보 부족"
 
     question = _make_question(item, reason) if needs_confirmation else None
+    item_type = ItemType.pending if needs_confirmation else ItemType(item.type)
+    recommended_tool = (
+        ToolName.save_to_pending
+        if needs_confirmation
+        else _tool_name(item.recommended_tool)
+    )
 
     return Item(
-        **item.model_dump(),
-        all_day=all_day,
+        type=item_type,
+        title=item.title,
+        assignee=item.assignee,
+        due_date=item.date if item.type == "task" and not needs_confirmation else None,
+        date=item.date if item.type == "calendar" and not needs_confirmation else None,
+        time=item.time if item.type == "calendar" and not needs_confirmation else None,
+        all_day=all_day and not needs_confirmation,
+        priority=item.priority,
+        content=item.source_sentence if item.type == "memo" and not needs_confirmation else None,
+        description=item.title if item.type == "risk" and not needs_confirmation else None,
         confidence=round(confidence, 2),
         needs_confirmation=needs_confirmation,
-        confirmation_reason=reason,
+        recommended_tool=recommended_tool,
+        source_sentence=item.source_sentence,
         clarification_question=question,
     )
 
 
 def finalize(output: LLMOutput) -> AnalyzeResult:
     return AnalyzeResult(items=[finalize_item(it) for it in output.items])
+
+
+def _tool_name(value: str | None) -> ToolName | None:
+    if value is None:
+        return None
+    return ToolName(value)

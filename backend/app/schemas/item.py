@@ -1,24 +1,16 @@
-"""
-공통 데이터 계약 (6-1 산출물).
+"""6-1 분석 내부 스키마.
 
-⚠️ DUMMY/임시: D1(공통 Item 스키마)은 다른 팀원이 정리해서 보내주기로 함.
-   여기 정의는 6-1을 독립적으로 굴리기 위한 **자리표시자**다.
-   확정본이 오면 이 파일을 교체하고 import 경로만 맞추면 된다.
-
-설계 메모(단순화):
-- 입력 유형(회의록/공지/메모…) 다중분류는 두지 않는다. 실행 항목이 없으면 items=[]로
-  표현한다(= "none"). 추출 로직이 입력 유형에 따라 갈리지 않으므로 라벨이 불필요.
-- 항목 유형은 Tool 라우팅의 핵심이라 유지하되, 가짜 유형은 정리한다:
-    · 보류(pending) → 별도 type이 아니라 needs_confirmation 플래그로 표현.
-    · 무시(ignore)  → 출력하지 않음(필터).
-    · 분석 실패/미분류 → type=None.
+최종 출력 Item 계약은 6-2 정본인 `app.schemas.items.Item`을 사용한다.
+이 모듈은 Solar/FakeLLM raw JSON 검증과 `/analyze` 응답 래퍼만 담당한다.
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-# Tool로 라우팅되는 실질 유형 4종
+from app.schemas.items import Item
+
+# LLM이 직접 분류하는 실질 유형 4종. pending/ignore는 코드가 후처리한다.
 ItemType = Literal["task", "calendar", "memo", "risk"]
 ToolName = Literal[
     "create_task", "create_calendar_event", "create_memo",
@@ -58,19 +50,6 @@ class LLMItem(BaseModel):
     time_present: bool = False
     needs_base_event: bool = False
     required_ok: bool = True
-
-
-class Item(LLMItem):
-    """완성도 판단까지 끝난 최종 항목 (6-1 → 6-2 핸드오프 단위).
-
-    type=None은 분석 실패/미분류(원문 보류)를 뜻한다.
-    """
-    type: ItemType | None = None
-    all_day: bool = False
-    confidence: float = 1.0                      # 표시용 = min(완성도, 분류확신도)
-    needs_confirmation: bool = False
-    confirmation_reason: str | None = None       # "분류 애매" | "정보 부족" | None
-    clarification_question: str | None = None
 
 
 class LLMOutput(BaseModel):

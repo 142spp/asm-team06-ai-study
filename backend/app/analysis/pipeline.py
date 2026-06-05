@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from app.analysis.completeness import finalize
 from app.llm.base import LLMClient, get_llm
 from app.schemas.item import AnalyzeResult, ContextBundle, Item, LLMOutput
+from app.schemas.items import ItemType, ToolName
 
 _KOREAN_WEEKDAYS = {
     "월요일": 0, "월": 0,
@@ -66,10 +67,12 @@ def _analysis_failed(raw_text: str) -> AnalyzeResult:
     """분석 실패 → 원문을 미분류 보류 항목으로 (확인 필요)."""
     return AnalyzeResult(
         items=[Item(
-            type=None, title="분석 실패", source_sentence=raw_text,
-            recommended_tool="save_to_pending", type_certainty=0.0,
-            date_status="missing", required_ok=False,
-            confidence=0.0, needs_confirmation=True, confirmation_reason="정보 부족",
+            type=ItemType.pending,
+            title="분석 실패",
+            source_sentence=raw_text,
+            recommended_tool=ToolName.save_to_pending,
+            confidence=0.0,
+            needs_confirmation=True,
             clarification_question="자동 분석에 실패했습니다. 원문을 직접 확인해 주세요.",
         )],
     )
