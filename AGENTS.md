@@ -5,14 +5,14 @@ Action Router Agent 모노레포의 에이전트용 정본. 전체 지도만 담
 
 ## 폴더 구조와 역할
 
-- `frontend/` - UI. FE 스택 미정(담당자 결정 후 작성).
+- `frontend/` - React. 실행법/구조는 `frontend/AGENTS.md` 참조.
 - `backend/` - FastAPI + LangGraph Agent 백엔드. 실행법/구조는 `backend/AGENTS.md` 참조.
 - `docs/` - 설계/계약/결정 문서. 문서별 용도는 `docs/AGENTS.md` 참조.
 
 ## 확정 / 미정 스택
 
-- 확정: Python / FastAPI(BE) / LangGraph / Pydantic.
-- 미정: FE 스택, Agent용 LLM(Solar 유력), 저장소(SQLite or JSON).
+- 확정: Python / FastAPI(BE) / LangGraph / Pydantic / React(CRA)(FE).
+- 미정: Agent용 LLM(Solar 유력), 저장소(SQLite or JSON).
 
 ## 핵심 제약
 

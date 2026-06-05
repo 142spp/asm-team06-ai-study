@@ -5,6 +5,11 @@ __pycache__/
 # uv / venv
 .venv/
 
+# Node
+node_modules/
+build/
+package-lock.json
+
 # env
 .env*
 
