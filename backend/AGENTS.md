@@ -7,21 +7,33 @@ FastAPI + LangGraph 기반 Action Router Agent 백엔드. backend 단독 uv 프�
 
 ## 구조
 
-- `app/main.py` - FastAPI 인스턴스. `GET /health`, `/analyze/`, `/confirm/`, `/feedback/*` 라우터를 등록한다.
+- `app/main.py` - FastAPI 인스턴스. `GET /health` + 라우터(`/analyze`, `/run`, `/resume`, `/storage`, `/mock/*` 그리고 6-3 `/confirm`, `/feedback/*`) 등록. lifespan 에서 `init_db()`.
 - `app/analysis/` - 6-1 분석 파이프라인(Context stub -> LLM -> 검증/재시도 -> completeness).
 - `app/llm/` - Solar/FakeLLM 클라이언트. `UPSTAGE_API_KEY` 없으면 FakeLLM 폴백.
-- `app/schemas/items.py` - 6-1 출력이자 6-2 입력인 공통 Item 정본.
-- `app/schemas/analysis.py` - 6-1 내부 LLM raw JSON / Context / AnalyzeResult 스키마.
-- `app/conflict/`, `app/storage/`, `app/tools/` - 6-2 라우팅 기반 모듈(충돌검사, SQLite, Local Tool).
+- `app/schemas/` - Pydantic 모델. items(6-1 출력=6-2 입력 공통 정본) / analysis(6-1 내부 raw/Context/AnalyzeResult) / routing(Tool선택,충돌) / approval(승인,실행결과) = 도메인. run(=/run,/resume 전송) = 그래프 레이어.
+- `app/storage/` - SQLite(`storage.db`). db(스키마+경로훅) / seed(시연용,명시호출) / queries(조회).
+- `app/tools/` - Local Tool 함수 + `TOOL_REGISTRY`.
+- `app/conflict/` - 규칙 기반 중복/충돌 검사(LLM 미사용).
+- `app/agent/` - 단일 LangGraph. state(AgentState) / nodes(analysis(6-1 mock), tool_selection, conflict_check, approval(interrupt), execution, feedback_seam(6-3 연결부)) / graph(MemorySaver+interrupt).
+- `app/api/routes/` - `analyze`(6-1 분석), `run`(`/run` 시작->interrupt, `/resume` 재개), `confirm`/`feedback`(6-3).
+- `app/mock_data/` - 6-1 출력 흉내 샘플 입력(6-1 미구현 동안 사용).
+- `app/logging_config.py` - `agent.*` 분기/단계 로깅.
+- `tests/` - pytest. conftest(tmp DB 격리) + 단위/엔드포인트 테스트.
+- 6-3(피드백/선호)은 `app/feedback/`, `app/preferences/`, `feedback.db` 에 있고, 그래프상 `feedback_seam` 노드 다음에 흡수 예정.
+- 설계 상세: 루트 `docs/api-contract.md`, `docs/data-model.md`, `docs/agent-design.md`.
 
 ## 실행 (레포 루트 셸에서)
 
 ```bash
-uv sync --directory backend
+uv sync --directory backend --dev    # dev 그룹(pytest) 포함
 uv run --directory backend fastapi dev app/main.py
+uv run --directory backend pytest    # 테스트
 ```
 
 `fastapi[standard]`에 uvicorn/fastapi-cli가 포함되므로 별도 추가하지 않는다.
+저장소 경로는 `ACTION_ROUTER_DB_PATH` env var 로 바꿀 수 있다(기본 `backend/storage.db`).
+HITL은 LangGraph `interrupt()`+MemorySaver(thread_id=session_id)로, `/run`(정지) -> `/resume`(재개)로 표현한다.
+시연용 기존 데이터는 `POST /mock/seed` 로 명시 초기화한다(일반 경로 자동 실행 없음).
 
 ## 의존성 정책
 
@@ -31,4 +43,5 @@ uv run --directory backend fastapi dev app/main.py
 
 ## 코드 스타일
 
-- Python은 PEP8 4-space를 따른다. 결정 이력은 `docs/decisions.md` 참조.
+- Python 들여쓰기는 PEP8 4 Spaces 로 통일한다(Tab 문자 미사용). CONTRIBUTING 확정 규칙.
+- 결정 이력/배경은 `docs/decisions.md` 참조.
