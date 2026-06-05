@@ -19,16 +19,15 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
 반드시 아래 JSON 스키마만 출력한다(설명/마크다운 금지).
 
 {
-  "input_type": "meeting_note|chat|notice|memo|none",
   "items": [{
-    "type": "task|calendar|memo|risk|pending|ignore",
+    "type": "task|calendar|memo|risk",
     "title": "string",
     "assignee": "string|null",
     "date": "YYYY-MM-DD|null",
     "time": "HH:MM|null",
     "priority": "high|medium|low",
     "source_sentence": "근거 원문",
-    "recommended_tool": "create_task|create_calendar_event|create_memo|create_risk_log|save_to_pending",
+    "recommended_tool": "create_task|create_calendar_event|create_memo|create_risk_log",
     "type_certainty": 0.0-1.0,
     "date_status": "concrete|vague|missing",
     "assignee_present": true/false,
@@ -40,10 +39,12 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
 
 규칙:
 - 점수(confidence)는 매기지 마라. 위 플래그만 정확히 채운다.
+- 유형은 task/calendar/memo/risk 4종만 쓴다(보류·무시 같은 유형은 만들지 마라).
+  확신이 낮으면 그래도 가장 그럴듯한 type을 고르고 type_certainty를 낮게 준다.
 - 특정 시각이 있으면 calendar, 산출물+마감이면 task.
 - 상대 날짜는 기준 날짜(KST)로 환산한다.
 - 한 입력에 여러 항목이 섞이면 독립 항목으로 분해한다.
-- 실행 항목이 없으면 input_type="none", items=[]."""
+- 실행 항목이 전혀 없으면 items=[] (빈 배열)."""
 
 
 class SolarLLM:

@@ -50,11 +50,10 @@ def _call_with_retry(
 
 
 def _analysis_failed(raw_text: str) -> AnalyzeResult:
-    """분석 실패 → 원문을 보류 항목으로 (확인 필요)."""
+    """분석 실패 → 원문을 미분류 보류 항목으로 (확인 필요)."""
     return AnalyzeResult(
-        input_type="none",
         items=[Item(
-            type="pending", title="분석 실패", source_sentence=raw_text,
+            type=None, title="분석 실패", source_sentence=raw_text,
             recommended_tool="save_to_pending", type_certainty=0.0,
             date_status="missing", required_ok=False,
             confidence=0.0, needs_confirmation=True, confirmation_reason="정보 부족",

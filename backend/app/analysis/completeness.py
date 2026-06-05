@@ -78,7 +78,4 @@ def finalize_item(item: LLMItem) -> Item:
 
 
 def finalize(output: LLMOutput) -> AnalyzeResult:
-    return AnalyzeResult(
-        input_type=output.input_type,
-        items=[finalize_item(it) for it in output.items],
-    )
+    return AnalyzeResult(items=[finalize_item(it) for it in output.items])
