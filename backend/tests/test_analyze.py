@@ -6,7 +6,8 @@
 from app.analysis.completeness import finalize_item
 from app.analysis.pipeline import analyze
 from app.llm.fake import FakeLLM
-from app.schemas.item import LLMItem
+from app.llm.solar import _extract_json
+from app.schemas.item import ContextBundle, LLMItem, LLMOutput
 
 BASE = "2026-06-05"
 
@@ -62,6 +63,86 @@ def test_no_action_items_is_empty():
 
     r = analyze(raw_text="ㅎㅇ", base_date=BASE, llm=Empty())
     assert r.items == []
+
+
+def test_fake_llm_output_matches_contract():
+    raw = FakeLLM().analyze(
+        raw_text="다음 주 화요일 오전 10시에 팀 회의 잡자.",
+        base_date=BASE,
+        context=ContextBundle(),
+    )
+    output = LLMOutput.model_validate(raw)
+    assert len(output.items) == 1
+    assert output.items[0].type == "calendar"
+
+
+def test_solar_json_extraction_matches_contract():
+    raw = _extract_json("""```json
+{
+  "items": [
+    {
+      "type": "task",
+      "title": "API 테스트 정리",
+      "assignee": "이동근",
+      "date": "2026-06-06",
+      "time": null,
+      "priority": "high",
+      "source_sentence": "동근은 API 테스트 정리",
+      "recommended_tool": "create_task",
+      "type_certainty": 0.9,
+      "date_status": "concrete",
+      "assignee_present": true,
+      "time_present": false,
+      "needs_base_event": false,
+      "required_ok": true
+    }
+  ]
+}
+```""")
+    output = LLMOutput.model_validate(raw)
+    assert output.items[0].type == "task"
+    assert output.items[0].recommended_tool == "create_task"
+
+
+def test_invalid_json_retries_then_uses_second_response():
+    class BrokenThenValid:
+        def __init__(self):
+            self.calls = 0
+
+        def analyze(self, **_):
+            self.calls += 1
+            if self.calls == 1:
+                raise ValueError("broken json")
+            return {"items": [{
+                "type": "memo",
+                "title": "두 번째 응답",
+                "source_sentence": "두 번째 응답",
+                "recommended_tool": "create_memo",
+            }]}
+
+    llm = BrokenThenValid()
+    r = analyze(raw_text="두 번째 응답", base_date=BASE, llm=llm)
+    assert llm.calls == 2
+    assert r.items[0].title == "두 번째 응답"
+    assert r.items[0].needs_confirmation is False
+
+
+def test_invalid_json_twice_falls_back_to_pending():
+    class AlwaysBroken:
+        def __init__(self):
+            self.calls = 0
+
+        def analyze(self, **_):
+            self.calls += 1
+            raise ValueError("broken json")
+
+    llm = AlwaysBroken()
+    r = analyze(raw_text="원문", base_date=BASE, llm=llm)
+    assert llm.calls == 2
+    assert len(r.items) == 1
+    assert r.items[0].type is None
+    assert r.items[0].recommended_tool == "save_to_pending"
+    assert r.items[0].needs_confirmation is True
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from app.schemas.item import ContextBundle
 
 class LLMClient(Protocol):
     def analyze(self, *, raw_text: str, base_date: str, context: ContextBundle) -> dict:
-        """{"input_type": ..., "items": [...]} 형태의 raw dict 반환. 검증은 pipeline이 한다."""
+        """{"items": [...]} 형태의 raw dict 반환. 검증은 pipeline이 한다."""
         ...
 
 

@@ -1,7 +1,6 @@
 """Upstage Solar 클라이언트.
 
-⚠️ 사용 전 준비 (오프라인 샌드박스라 여기서 설치는 못 함):
-    uv add --directory backend langchain-upstage
+사용 전 준비:
     export UPSTAGE_API_KEY=...        # Upstage 콘솔 발급
     export SOLAR_MODEL=solar-pro      # (선택) 기본값 solar-pro
 
@@ -72,4 +71,6 @@ def _extract_json(content: str) -> dict:
         text = text.split("```", 2)[1]
         text = text[4:] if text.lower().startswith("json") else text
     start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1 or start > end:
+        raise ValueError("Solar response does not contain a JSON object")
     return json.loads(text[start : end + 1])
