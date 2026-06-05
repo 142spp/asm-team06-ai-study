@@ -7,10 +7,12 @@ FastAPI + LangGraph 기반 Action Router Agent 백엔드. backend 단독 uv 프�
 
 ## 구조
 
-- `app/main.py` - FastAPI 인스턴스. 현재는 `GET /health`만 존재.
-- `app/` - 향후 Agent 코드/라우터를 둘 위치.
-- (향후) LangGraph 노드/그래프, 프롬프트는 안정화 후 `docs/prompts`에서 backend로 이전한다.
-- (향후) 데모 시나리오 테스트는 `docs/samples`에서 `backend/tests`로 이전한다.
+- `app/main.py` - FastAPI 인스턴스. `GET /health`, `/analyze/`, `/confirm/`, `/feedback/*` 라우터를 등록한다.
+- `app/analysis/` - 6-1 분석 파이프라인(Context stub -> LLM -> 검증/재시도 -> completeness).
+- `app/llm/` - Solar/FakeLLM 클라이언트. `UPSTAGE_API_KEY` 없으면 FakeLLM 폴백.
+- `app/schemas/items.py` - 6-1 출력이자 6-2 입력인 공통 Item 정본.
+- `app/schemas/analysis.py` - 6-1 내부 LLM raw JSON / Context / AnalyzeResult 스키마.
+- `app/conflict/`, `app/storage/`, `app/tools/` - 6-2 라우팅 기반 모듈(충돌검사, SQLite, Local Tool).
 
 ## 실행 (레포 루트 셸에서)
 
@@ -23,10 +25,10 @@ uv run --directory backend fastapi dev app/main.py
 
 ## 의존성 정책
 
-- 현재 의존성: `fastapi[standard]`, `langgraph`, `pydantic`.
-- LLM SDK는 모델 미정이므로 아직 추가하지 않는다.
+- 현재 의존성: `fastapi[standard]`, `langgraph`, `langchain-upstage`, `pydantic`.
+- dev 의존성: `pytest`.
+- `langchain-upstage`가 의존하는 `tokenizers==0.20.3` 빌드/휠 호환성 때문에 Python은 3.12 계열(`>=3.12,<3.13`)로 제한한다.
 
-## 코드 스타일 (미해결)
+## 코드 스타일
 
-- CONTRIBUTING은 들여쓰기 Tab(Tab=4 spaces) 통일을 명시하나, Python은 PEP8/관용상 스페이스가 표준이라 충돌한다.
-- 팀 확인 전까지 PEP8 4-space로 작성한다. 결정은 `docs/decisions.md`에 미해결로 기록한다.
+- Python은 PEP8 4-space를 따른다. 결정 이력은 `docs/decisions.md` 참조.

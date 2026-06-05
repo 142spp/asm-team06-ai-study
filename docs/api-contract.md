@@ -22,6 +22,36 @@ feat/preferences 에서 별도 정의되며, 향후 같은 그래프로 흡수 �
 ### GET /health
 - 응답: `{"status": "ok"}`
 
+### POST /analyze/
+6-1 분석 단계 단독 엔드포인트. 비정형 텍스트를 받아 6-2 `Item` 계약에 맞는 실행 항목 배열을 반환한다.
+저장/Tool 실행은 하지 않는다.
+
+요청:
+```json
+{
+  "raw_text": "내일까지 성종은 발표자료, 금요일 오전 10시 최종 리허설하자.",
+  "base_date": "2026-06-05"
+}
+```
+
+응답:
+```json
+{
+  "items": [
+    {
+      "type": "task",
+      "title": "발표자료 준비",
+      "assignee": "성종",
+      "due_date": "2026-06-06",
+      "date": null,
+      "recommended_tool": "create_task",
+      "confidence": 0.95,
+      "needs_confirmation": false
+    }
+  ]
+}
+```
+
 ### POST /run
 6-1 항목(또는 mock)을 받아 그래프 시작. 승인 지점에서 정지.
 
