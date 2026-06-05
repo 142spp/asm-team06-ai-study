@@ -23,8 +23,8 @@ uv run --directory backend fastapi dev app/main.py
 
 ## 의존성 정책
 
-- 현재 의존성: `fastapi[standard]`, `langgraph`, `pydantic`.
-- LLM SDK는 모델 미정이므로 아직 추가하지 않는다.
+- 현재 의존성: `fastapi[standard]`, `langgraph`, `langchain-upstage`, `pydantic`.
+- `langchain-upstage`가 의존하는 `tokenizers==0.20.3` 빌드/휠 호환성 때문에 Python은 3.12 계열(`>=3.12,<3.13`)로 제한한다.
 
 ## 코드 스타일 (미해결)
 
