@@ -11,6 +11,7 @@ planning.md: Solar의 JSON 출력을 코드가 해석한다 → 여기선 raw JS
 
 import json
 import os
+from datetime import date
 
 from app.schemas.item import ContextBundle
 
@@ -42,6 +43,14 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
   확신이 낮으면 그래도 가장 그럴듯한 type을 고르고 type_certainty를 낮게 준다.
 - 특정 시각이 있으면 calendar, 산출물+마감이면 task.
 - 상대 날짜는 기준 날짜(KST)로 환산한다.
+- 기준 날짜의 요일을 반드시 사용한다. "다음 주 화요일"은 기준 날짜가 속한 주의
+  다음 주 화요일이다. 임의로 한 주를 더 밀지 마라.
+- "내일", "내일까지"는 기준 날짜 + 1일이다.
+- "다음 주쯤", "언젠가", "~전까지"처럼 모호한 날짜/기준 이벤트 표현은
+  date_status="vague" 또는 needs_base_event=true로 두고 정확한 날짜를 지어내지 마라.
+- "안 되면", "실패하면", "대체", "Mock"처럼 실패 조건과 대응 방안이 함께 나오면
+  task가 아니라 risk로 분류하고 recommended_tool="create_risk_log"를 사용한다.
+  대응 방안을 별도 task로 만들지 마라.
 - 한 입력에 여러 항목이 섞이면 독립 항목으로 분해한다.
 - 실행 항목이 전혀 없으면 items=[] (빈 배열)."""
 
@@ -54,7 +63,7 @@ class SolarLLM:
 
     def analyze(self, *, raw_text: str, base_date: str, context: ContextBundle) -> dict:
         human = (
-            f"기준 날짜(KST): {base_date}\n"
+            f"기준 날짜(KST): {_format_base_date(base_date)}\n"
             f"User Preference: {json.dumps(context.preferences, ensure_ascii=False)}\n"
             f"Guideline: {json.dumps(context.guidelines, ensure_ascii=False)}\n"
             f"기존 항목 요약: {context.existing_items_summary}\n\n"
@@ -62,6 +71,15 @@ class SolarLLM:
         )
         resp = self._llm.invoke([("system", _SYSTEM), ("human", human)])
         return _extract_json(resp.content)
+
+
+def _format_base_date(base_date: str) -> str:
+    weekdays = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+    try:
+        parsed = date.fromisoformat(base_date)
+    except ValueError:
+        return base_date
+    return f"{base_date} ({weekdays[parsed.weekday()]})"
 
 
 def _extract_json(content: str) -> dict:

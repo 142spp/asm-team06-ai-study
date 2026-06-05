@@ -145,6 +145,45 @@ def test_invalid_json_twice_falls_back_to_pending():
     assert r.items[0].needs_confirmation is True
 
 
+def test_next_weekday_is_normalized_from_base_date():
+    class WrongDate:
+        def analyze(self, **_):
+            return {"items": [{
+                "type": "calendar",
+                "title": "팀 회의",
+                "date": "2026-06-16",
+                "time": "10:00",
+                "source_sentence": "다음 주 화요일 오전 10시에 팀 회의 잡자.",
+                "recommended_tool": "create_calendar_event",
+                "type_certainty": 0.95,
+                "date_status": "concrete",
+                "time_present": True,
+                "required_ok": True,
+            }]}
+
+    r = analyze(raw_text="다음 주 화요일 오전 10시에 팀 회의 잡자.", base_date=BASE, llm=WrongDate())
+    assert r.items[0].date == "2026-06-09"
+
+
+def test_vague_date_does_not_keep_invented_date():
+    class InventedVagueDate:
+        def analyze(self, **_):
+            return {"items": [{
+                "type": "calendar",
+                "title": "멘토님께 보여주기",
+                "date": "2026-06-12",
+                "source_sentence": "다음 주쯤 멘토님께 보여드리고",
+                "recommended_tool": "create_calendar_event",
+                "type_certainty": 0.85,
+                "date_status": "vague",
+                "required_ok": True,
+            }]}
+
+    r = analyze(raw_text="다음 주쯤 멘토님께 보여드리고", base_date=BASE, llm=InventedVagueDate())
+    assert r.items[0].date is None
+    assert r.items[0].needs_confirmation is True
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

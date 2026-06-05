@@ -4,11 +4,23 @@ Context Loader → (1 LLM 호출) → Pydantic 검증(1회 재시도) → 선호
 planning.md: 검증 실패 시 1회 재시도, 그래도 실패하면 분석 실패 + 원문을 Pending으로.
 """
 
+from datetime import date, timedelta
+
 from pydantic import ValidationError
 
 from app.analysis.completeness import finalize
 from app.llm.base import LLMClient, get_llm
 from app.schemas.item import AnalyzeResult, ContextBundle, Item, LLMOutput
+
+_KOREAN_WEEKDAYS = {
+    "월요일": 0, "월": 0,
+    "화요일": 1, "화": 1,
+    "수요일": 2, "수": 2,
+    "목요일": 3, "목": 3,
+    "금요일": 4, "금": 4,
+    "토요일": 5, "토": 5,
+    "일요일": 6, "일": 6,
+}
 
 
 def load_context() -> ContextBundle:
@@ -33,6 +45,7 @@ def analyze(*, raw_text: str, base_date: str, llm: LLMClient | None = None) -> A
     if output is None:
         return _analysis_failed(raw_text)
 
+    output = _normalize_relative_dates(output, base_date)
     result = finalize(output)
     return _postprocess(result, context)
 
@@ -60,3 +73,40 @@ def _analysis_failed(raw_text: str) -> AnalyzeResult:
             clarification_question="자동 분석에 실패했습니다. 원문을 직접 확인해 주세요.",
         )],
     )
+
+
+def _normalize_relative_dates(output: LLMOutput, base_date: str) -> LLMOutput:
+    """LLM이 흔들리기 쉬운 명확한 상대 날짜만 코드에서 보정한다."""
+    try:
+        base = date.fromisoformat(base_date)
+    except ValueError:
+        return output
+
+    normalized = []
+    for item in output.items:
+        sentence = item.source_sentence
+        updates: dict[str, object] = {}
+
+        next_weekday = _next_weekday(sentence, base)
+        if next_weekday is not None:
+            updates.update(date=next_weekday.isoformat(), date_status="concrete")
+        elif "내일까지" in sentence or "내일" in sentence:
+            updates.update(date=(base + timedelta(days=1)).isoformat(), date_status="concrete")
+
+        if "쯤" in sentence:
+            updates.update(date=None, date_status="vague")
+
+        normalized.append(item.model_copy(update=updates) if updates else item)
+
+    return LLMOutput(items=normalized)
+
+
+def _next_weekday(sentence: str, base: date) -> date | None:
+    if "다음 주" not in sentence and "다음주" not in sentence:
+        return None
+
+    for label, target_weekday in _KOREAN_WEEKDAYS.items():
+        if label in sentence:
+            start_of_week = base - timedelta(days=base.weekday())
+            return start_of_week + timedelta(days=7 + target_weekday)
+    return None
