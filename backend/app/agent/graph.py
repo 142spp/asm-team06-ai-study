@@ -37,6 +37,12 @@ def build_graph():
 
     lru_cache 로 동일 인스턴스를 재사용하므로 /run 과 /resume 이 같은 checkpointer
     상태를 thread_id 로 공유한다.
+
+    제약(단일 워커 전제): MemorySaver 는 프로세스 인메모리이고 lru_cache 도 프로세스
+    스코프다. 따라서 uvicorn 다중 워커(--workers N)나 dev 리로드 환경에서는 /run 과
+    /resume 이 서로 다른 프로세스에 분배되면 resume 이 thread 상태를 찾지 못한다.
+    서버 재시작 시 진행 중 세션도 소실된다. 운영 전환 시 SqliteSaver/PostgresSaver 로
+    교체한다.
     """
     g = StateGraph(AgentState)
     g.add_node("analysis", analysis_node)

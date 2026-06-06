@@ -103,7 +103,7 @@ def test_resume_modify_recheck_and_no_store(client):
 
 
 def test_resume_missing_required_falls_back_to_pending(client):
-    # calendar 는 title+date 필수. date 누락 -> pending 폴백, status=failed.
+    # calendar 는 title+date 필수. date 누락 -> pending 폴백(저장됨), status=pending.
     _run_one(client, "s-missing", {"type": "calendar", "title": "날짜없는 일정"})
     out = client.post(
         "/resume",
@@ -112,7 +112,7 @@ def test_resume_missing_required_falls_back_to_pending(client):
             "decisions": [{"item_id": "item-0", "action": "approve"}],
         },
     ).json()
-    assert out["results"][0]["status"] == "failed"
+    assert out["results"][0]["status"] == "pending"
     assert client.get("/storage/pending_queue").json()["count"] == 1
     assert client.get("/storage/calendar_events").json()["count"] == 0
 

@@ -26,6 +26,10 @@ def setup_logging(level: int | str | None = None) -> logging.Logger:
 
     if level is None:
         level = os.environ.get("ACTION_ROUTER_LOG_LEVEL", "INFO")
+    # 표준 레벨명은 대문자만 유효하다. env/인자로 'debug' 같은 소문자가 와도
+    # setLevel 이 ValueError 로 부팅을 깨뜨리지 않도록 정규화한다.
+    if isinstance(level, str):
+        level = level.upper()
     agent_logger.setLevel(level)
 
     if not _CONFIGURED:

@@ -9,6 +9,8 @@
 세션 상태는 MemorySaver(checkpointer)에 session_id(=thread_id)로 보관된다.
 """
 
+import uuid
+
 from fastapi import APIRouter, HTTPException
 from langgraph.types import Command
 
@@ -30,6 +32,8 @@ def _to_response(session_id: str, result: dict) -> RunResponse:
     """그래프 invoke 결과를 응답으로 변환. interrupt 면 승인 대기, 아니면 완료."""
     interrupts = result.get("__interrupt__")
     if interrupts:
+        # 이 그래프의 interrupt 는 request_approval 노드 1개뿐이라 항상 단일이다.
+        # (향후 병렬 분기로 interrupt 가 여럿 생기면 id 별 매핑이 필요 - 현재는 [0] 전제.)
         payload = interrupts[0].value
         return RunResponse(
             session_id=session_id,
@@ -63,7 +67,13 @@ def run(req: RunRequest) -> RunResponse:
 
 @router.post("/resume", response_model=RunResponse)
 def resume(req: ResumeRequest) -> RunResponse:
-    """사용자 결정으로 그래프 재개. approve 만 저장된다."""
+    """사용자 결정으로 그래프 재개. approve 만 저장된다.
+
+    전제: 해당 session_id 가 승인 interrupt 로 정지된 상태여야 한다. 정지 상태가
+    아닌(또는 존재하지 않는) session_id 로 호출하거나 동일 session 을 중복 resume
+    하면 동작이 보장되지 않는다(데모는 1회 resume happy path 전제). 운영 시 대기
+    세션 존재 검증 후 없으면 4xx 반환을 추가한다.
+    """
     graph = build_graph()
     result = graph.invoke(
         Command(resume=[d.model_dump(mode="json") for d in req.decisions]),
@@ -99,10 +109,15 @@ def mock_seed() -> dict:
 def mock_run(scenario: str) -> RunResponse:
     """Mock 시나리오 입력을 /run 으로 흘려보내는 데모 트리거."""
     try:
-        payload = get_scenario(scenario)
+        payload = dict(get_scenario(scenario))  # 전역 시나리오 dict 보호용 얕은 복사
     except KeyError:
         raise HTTPException(
             status_code=404,
             detail=f"알 수 없는 시나리오: {scenario}. 가능: {sorted(SAMPLE_SCENARIOS)}",
         )
+    # 매 호출 고유 session_id 로 새 thread 를 연다. 같은 시나리오를 반복 시연해도
+    # 이전 interrupt 가 남은 thread 에 재진입하지 않는다(MemorySaver 는 프로세스 지속).
+    # 반환된 RunResponse.session_id 로 이어서 /resume 한다.
+    base = payload.get("session_id", scenario)
+    payload["session_id"] = f"{base}-{uuid.uuid4().hex[:8]}"
     return run(RunRequest.model_validate(payload))

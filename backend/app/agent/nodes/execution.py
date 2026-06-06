@@ -65,9 +65,12 @@ def _missing_required(item: Item) -> list[str]:
     return missing
 
 
-def _execute_one(item: Item) -> ExecutionResult:
-    """단일 승인 항목을 실행한다 (재도출 + 재검증 + 실패 폴백)."""
-    item_id = item.id or ""
+def _execute_one(item: Item, item_id: str) -> ExecutionResult:
+    """단일 승인 항목을 실행한다 (재도출 + 재검증 + 실패 폴백).
+
+    item_id 는 decision.item_id(원본 식별자)를 명시적으로 받는다. modified_item 의
+    id 는 FE 가 비워 보낼 수 있어 신뢰하지 않는다(결과-원본 매칭 유지).
+    """
     if item.type == ItemType.ignore:
         return ExecutionResult(
             item_id=item_id, status=ExecutionStatus.excluded, error="ignore 항목"
@@ -82,9 +85,10 @@ def _execute_one(item: Item) -> ExecutionResult:
         reason = f"필수 필드 누락: {', '.join(missing)}"
         logger.warning("필수 필드 누락 -> pending: item=%s (%s)", item_id, reason)
         pid = save_to_pending(title=item.title, reason=reason)
+        # 저장됐으므로 pending(=보류 저장)이 의미상 맞다. tool 실행 실패 폴백과 동일.
         return ExecutionResult(
             item_id=item_id,
-            status=ExecutionStatus.failed,
+            status=ExecutionStatus.pending,
             tool=tool,
             stored_id=pid,
             error=reason,
@@ -169,7 +173,7 @@ def execution_node(state: dict) -> dict:
                 )
             )
             continue
-        results.append(_execute_one(item))
+        results.append(_execute_one(item, decision.item_id))
 
     summary = {
         "executed": sum(1 for r in results if r.status == ExecutionStatus.success),
