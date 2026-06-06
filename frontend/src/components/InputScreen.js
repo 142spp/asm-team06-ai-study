@@ -82,46 +82,56 @@ const AppHeader = styled.div`
 `;
 
 const AppLogo = styled.span`
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: ${theme.ink};
 `;
 
 const KstBadge = styled.span`
     font-size: 12px;
     color: ${theme.ink2};
-    border: 2px solid ${theme.hair};
-    background: #fff;
+    border: 1.5px solid ${theme.hair};
+    background: ${theme.paper};
     border-radius: 9px;
-    padding: 3px 11px;
+    padding: 4px 12px;
+    line-height: 1;
 
-    b { color: ${theme.ink}; }
+    b { color: ${theme.ink}; font-weight: 700; }
 `;
 
 const FieldLabel = styled.div`
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
-    margin: 0 0 7px;
+    margin: 0 0 8px;
+    color: ${theme.muted};
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 `;
 
 const TextInput = styled.textarea`
     width: 100%;
     border: 2px solid ${theme.hair};
     border-radius: ${radius.input};
-    padding: 11px 13px;
-    font-size: 13.5px;
+    padding: 14px 16px;
+    font-size: 14px;
     font-family: inherit;
+    line-height: 1.7;
     resize: vertical;
     background: #fff;
     color: ${theme.ink};
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
 
-    &:focus { outline: none; border-color: ${theme.note}; }
+    &::placeholder { color: ${theme.muted}; }
+    &:focus { outline: none; border-color: ${theme.note}; box-shadow: 0 0 0 3px rgba(45,87,196,.08); }
 `;
 
 const CharCount = styled.div`
     font-size: 12px;
     color: ${theme.muted};
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    text-align: right;
 `;
 
 const ErrorBox = styled.div`

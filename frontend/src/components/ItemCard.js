@@ -151,7 +151,7 @@ const ItemWrap = styled.div`
     background: #fff;
     border: 2px solid ${({ $flagged }) => ($flagged ? theme.warn : theme.line)};
     border-radius: 13px 10px 14px 9px;
-    padding: 14px 15px;
+    padding: 16px 18px;
     box-shadow: ${({ $flagged }) =>
         $flagged ? "2px 3px 0 rgba(176,106,16,.18)" : "2px 3px 0 rgba(0,0,0,.07)"};
     margin-bottom: 12px;
@@ -162,39 +162,52 @@ const ItemHeader = styled.div`
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    margin-bottom: 2px;
 `;
 
 const ItemTitle = styled.span`
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    color: ${theme.ink};
 `;
 
 const ConfPill = styled(Pill)`
     margin-left: auto;
-    font-size: 13px;
+    font-size: 12px;
+    opacity: 0.75;
 `;
 
 const ItemMeta = styled.div`
     display: flex;
-    gap: 14px;
+    gap: 16px;
     flex-wrap: wrap;
     margin: 8px 0 0;
-    color: ${theme.ink2};
-    font-size: 13px;
+    color: ${theme.muted};
+    font-size: 12.5px;
 
-    b { color: ${theme.ink}; font-weight: 700; }
+    b { color: ${theme.ink2}; font-weight: 600; }
 `;
 
 const ReasonBox = styled.div`
-    margin-top: 10px;
-    border-top: 2px dashed ${theme.hair};
-    padding-top: 9px;
+    margin-top: 12px;
+    border-top: 1.5px dashed ${theme.hair};
+    padding-top: 10px;
     font-size: 12.5px;
+    line-height: 1.6;
+    background: ${theme.paper};
+    border-radius: 0 0 8px 8px;
+    margin-left: -18px;
+    margin-right: -18px;
+    margin-bottom: -16px;
+    padding: 10px 18px 14px;
 `;
 
 const Source = styled.div`
     color: ${theme.ink2};
     font-style: italic;
+    font-size: 12px;
+    margin-bottom: 4px;
 `;
 
 const Why = styled.div`

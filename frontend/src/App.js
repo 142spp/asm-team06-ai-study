@@ -19,19 +19,23 @@ const STEPS = [
 
 // ===== styled =====
 const AppTop = styled.header`
-    margin-bottom: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 2px dashed ${theme.hair};
 `;
 
 const BrandH1 = styled.h1`
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 24px;
+    font-weight: 800;
     margin: 0;
+    letter-spacing: -0.5px;
+    color: ${theme.ink};
 `;
 
 const BrandP = styled.p`
-    margin: 2px 0 0;
-    color: ${theme.ink2};
-    font-size: 13px;
+    margin: 4px 0 0;
+    color: ${theme.muted};
+    font-size: 12.5px;
 `;
 
 const FlowNav = styled.nav`
@@ -39,46 +43,51 @@ const FlowNav = styled.nav`
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
-    padding: 12px 14px;
+    padding: 10px 14px;
     background: ${theme.panel};
     border: 2px solid ${theme.line};
     border-radius: 18px 14px 20px 12px;
     box-shadow: ${shadow.card};
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 `;
 
 const FlowTab = styled.button`
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 15px;
-    border: 2px solid ${theme.line};
+    font-size: 13.5px;
+    font-weight: ${({ $active }) => ($active ? "700" : "500")};
+    border: 2px solid ${({ $active }) => ($active ? theme.ink : theme.hair)};
     background: ${({ $active }) => ($active ? theme.ink : "#fff")};
-    color: ${({ $active }) => ($active ? "#fff" : theme.ink)};
+    color: ${({ $active }) => ($active ? "#fff" : theme.ink2)};
     border-radius: ${radius.btn};
     padding: 6px 13px;
     cursor: pointer;
     font-family: inherit;
-    transition: transform 0.08s;
+    transition: border-color 0.1s, color 0.1s;
 
-    &:hover { transform: translateY(-1px); }
+    &:hover:not([style*="active"]) {
+        border-color: ${theme.line};
+        color: ${theme.ink};
+    }
 `;
 
 const FlowNum = styled.span`
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    border: 2px solid ${({ $active }) => ($active ? "#fff" : theme.line)};
+    border: 1.5px solid ${({ $active }) => ($active ? "#fff" : theme.hair)};
     display: grid;
     place-items: center;
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 700;
     background: ${({ $active }) => ($active ? "#fff" : theme.paper)};
-    color: ${({ $active }) => ($active ? theme.ink : "inherit")};
+    color: ${({ $active }) => ($active ? theme.ink : theme.muted)};
 `;
 
 const FlowArrow = styled.span`
-    color: ${theme.muted};
-    font-size: 18px;
+    color: ${theme.hair};
+    font-size: 16px;
 `;
 
 const MainContent = styled.main`
