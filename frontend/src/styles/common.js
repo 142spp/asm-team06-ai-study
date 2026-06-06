@@ -19,15 +19,14 @@ export const Card = styled.div`
 
 // ===== 버튼 =====
 export const Btn = styled.button`
-    font-size: ${({ sm }) => (sm ? "13px" : "15px")};
-    border: 2.5px solid ${theme.line};
-    background: ${({ primary, ghost, warn }) =>
-        primary ? theme.ink : warn ? theme.warnbg : "#fff"};
-    color: ${({ primary, warn }) =>
-        primary ? "#fff" : warn ? theme.warn : theme.ink};
-    border-color: ${({ warn }) => (warn ? theme.warn : theme.line)};
+    font-size: ${({ $sm }) => ($sm ? "13px" : "15px")};
+    border: 2.5px solid ${({ $warn }) => ($warn ? theme.warn : theme.line)};
+    background: ${({ $primary, $warn }) =>
+        $primary ? theme.ink : $warn ? theme.warnbg : "#fff"};
+    color: ${({ $primary, $warn }) =>
+        $primary ? "#fff" : $warn ? theme.warn : theme.ink};
     border-radius: ${radius.btn};
-    padding: ${({ sm }) => (sm ? "5px 11px" : "8px 16px")};
+    padding: ${({ $sm }) => ($sm ? "5px 11px" : "8px 16px")};
     cursor: pointer;
     box-shadow: ${shadow.btn};
     white-space: nowrap;
@@ -116,13 +115,13 @@ export const Pill = styled.span`
     align-items: center;
     gap: 5px;
     font-size: 12px;
-    border: 2px solid ${({ ok, warn, danger }) =>
-        ok ? theme.ok : warn ? theme.warn : danger ? theme.danger : theme.hair};
+    border: 2px solid ${({ $ok, $warn, $danger }) =>
+        $ok ? theme.ok : $warn ? theme.warn : $danger ? theme.danger : theme.hair};
     background: #fff;
     border-radius: 20px;
     padding: 1px 9px;
-    color: ${({ ok, warn, danger }) =>
-        ok ? theme.ok : warn ? theme.warn : danger ? theme.danger : theme.ink2};
+    color: ${({ $ok, $warn, $danger }) =>
+        $ok ? theme.ok : $warn ? theme.warn : $danger ? theme.danger : theme.ink2};
 `;
 
 export const NeedsConfirm = styled.span`

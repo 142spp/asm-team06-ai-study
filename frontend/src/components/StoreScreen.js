@@ -47,7 +47,7 @@ export default function StoreScreen() {
                                     <td>{t.title} {t.note && <Pill>{t.note}</Pill>}</td>
                                     <td>{t.assignee}</td>
                                     <td>{t.due}</td>
-                                    <td><Pill danger={t.priority === "high"}>{t.priority === "high" ? "높음" : "보통"}</Pill></td>
+                                    <td><Pill $danger={t.priority === "high"}>{t.priority === "high" ? "높음" : "보통"}</Pill></td>
                                     <td>{t.status}</td>
                                 </tr>
                             ))}
@@ -119,7 +119,7 @@ export default function StoreScreen() {
                                 {mockStore.preferences.map((p) => (
                                     <tr key={p.id}>
                                         <td>{p.rule}</td>
-                                        <td><Pill ok={p.active}>{p.active ? "활성" : "비활성"}</Pill></td>
+                                        <td><Pill $ok={p.active}>{p.active ? "활성" : "비활성"}</Pill></td>
                                         <td style={{ color: theme.muted }}>{p.basis}</td>
                                     </tr>
                                 ))}

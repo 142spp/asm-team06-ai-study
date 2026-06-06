@@ -66,8 +66,8 @@ export default function SummaryScreen({ approved, excluded, onGoStore, onRestart
                 <NextRow>
                     <Muted>다음 단계 →</Muted>
                     <BtnRow>
-                        <Btn primary onClick={onGoStore}>저장소 보기</Btn>
-                        <Btn ghost sm onClick={onRestart}>새 텍스트 분석</Btn>
+                        <Btn $primary onClick={onGoStore}>저장소 보기</Btn>
+                        <Btn $ghost $sm onClick={onRestart}>새 텍스트 분석</Btn>
                     </BtnRow>
                 </NextRow>
 

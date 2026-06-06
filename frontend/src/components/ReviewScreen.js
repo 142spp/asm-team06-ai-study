@@ -40,13 +40,13 @@ export default function ReviewScreen({ result, onDone }) {
                             실행 항목 <b>{items.length}</b>개 분해됨 · 충돌 {conflictCount} · 확인 필요 {needsConfirmCount}
                         </SummaryText>
                     </SummaryLeft>
-                    <Btn primary onClick={handleApproveAll}>✓ 전체 승인</Btn>
+                    <Btn $primary onClick={handleApproveAll}>✓ 전체 승인</Btn>
                 </SummaryBar>
 
                 <ProgressRow>
-                    <Pill ok>✓ 승인 {approved.length}</Pill>
+                    <Pill $ok>✓ 승인 {approved.length}</Pill>
                     <Pill>대기 {pending.length}</Pill>
-                    <Pill warn>제외 {excluded.length}</Pill>
+                    <Pill $warn>제외 {excluded.length}</Pill>
                 </ProgressRow>
 
                 {pending.map((item, i) => (
@@ -70,7 +70,7 @@ export default function ReviewScreen({ result, onDone }) {
                 <AgentLog />
 
                 <BtnRow style={{ marginTop: "20px" }}>
-                    <Btn primary onClick={() => onDone(approved, excluded)} disabled={approved.length === 0}>
+                    <Btn $primary onClick={() => onDone(approved, excluded)} disabled={approved.length === 0}>
                         선호 확인 →
                     </Btn>
                 </BtnRow>

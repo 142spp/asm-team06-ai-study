@@ -58,11 +58,11 @@ export default function InputScreen({ onAnalyzeDone }) {
                 <CharCount>{text.length}자</CharCount>
 
                 <BtnRow>
-                    <Btn primary onClick={handleAnalyze} disabled={loading || !text.trim()}>
+                    <Btn $primary onClick={handleAnalyze} disabled={loading || !text.trim()}>
                         {loading ? "분석 중…" : "분석 실행"}
                     </Btn>
-                    <Btn ghost onClick={() => setText(SAMPLE_TEXT)}>샘플 불러오기</Btn>
-                    <Btn ghost onClick={() => setText("")}>비우기</Btn>
+                    <Btn $ghost onClick={() => setText(SAMPLE_TEXT)}>샘플 불러오기</Btn>
+                    <Btn $ghost onClick={() => setText("")}>비우기</Btn>
                 </BtnRow>
 
                 {error && <ErrorBox>{error}</ErrorBox>}

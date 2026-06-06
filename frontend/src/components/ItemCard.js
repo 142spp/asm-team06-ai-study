@@ -31,8 +31,8 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
             <ItemHeader>
                 <TypeBadge type={item.type}>{TYPE_LABEL[item.type] || item.type}</TypeBadge>
                 <ItemTitle>{item.title}</ItemTitle>
-                {item.priority === "high" && <Pill danger>우선순위 높음</Pill>}
-                {conflict?.type === "duplicate" && <Pill warn>중복 후보</Pill>}
+                {item.priority === "high" && <Pill $danger>우선순위 높음</Pill>}
+                {conflict?.type === "duplicate" && <Pill $warn>중복 후보</Pill>}
                 {item.needs_confirmation && <NeedsConfirm>확인 필요</NeedsConfirm>}
                 <ConfPill>confidence {item.confidence?.toFixed(2) ?? "—"}</ConfPill>
             </ItemHeader>
@@ -112,9 +112,9 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                         </EditField>
                     </EditGrid>
                     <BtnRow>
-                        <Btn sm primary onClick={handleSaveEdit}>저장 후 재검증</Btn>
-                        <Btn sm ghost onClick={() => setEditing(false)}>취소</Btn>
-                        <Btn sm warn onClick={() => onExclude(item)}>제외</Btn>
+                        <Btn $sm $primary onClick={handleSaveEdit}>저장 후 재검증</Btn>
+                        <Btn $sm $ghost onClick={() => setEditing(false)}>취소</Btn>
+                        <Btn $sm $warn onClick={() => onExclude(item)}>제외</Btn>
                     </BtnRow>
                 </EditPanel>
             )}
@@ -123,21 +123,21 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                 <BtnRow style={{ marginTop: "12px" }}>
                     {conflict?.type === "time_conflict" ? (
                         <>
-                            <Btn sm primary onClick={() => onApprove(item)}>승인(11시로)</Btn>
-                            <Btn sm ghost onClick={() => setEditing(true)}>수정</Btn>
-                            <Btn sm warn onClick={() => onExclude(item)}>Pending</Btn>
+                            <Btn $sm $primary onClick={() => onApprove(item)}>승인(11시로)</Btn>
+                            <Btn $sm $ghost onClick={() => setEditing(true)}>수정</Btn>
+                            <Btn $sm $warn onClick={() => onExclude(item)}>Pending</Btn>
                         </>
                     ) : conflict?.type === "duplicate" ? (
                         <>
-                            <Btn sm ghost onClick={() => onApprove(item)}>새로 생성</Btn>
-                            <Btn sm ghost>병합 제안</Btn>
-                            <Btn sm warn onClick={() => onExclude(item)}>제외</Btn>
+                            <Btn $sm $ghost onClick={() => onApprove(item)}>새로 생성</Btn>
+                            <Btn $sm $ghost>병합 제안</Btn>
+                            <Btn $sm $warn onClick={() => onExclude(item)}>제외</Btn>
                         </>
                     ) : (
                         <>
-                            <Btn sm primary onClick={() => onApprove(item)}>승인</Btn>
-                            <Btn sm ghost onClick={() => setEditing(true)}>수정</Btn>
-                            <Btn sm ghost onClick={() => onExclude(item)}>제외</Btn>
+                            <Btn $sm $primary onClick={() => onApprove(item)}>승인</Btn>
+                            <Btn $sm $ghost onClick={() => setEditing(true)}>수정</Btn>
+                            <Btn $sm $ghost onClick={() => onExclude(item)}>제외</Btn>
                         </>
                     )}
                 </BtnRow>

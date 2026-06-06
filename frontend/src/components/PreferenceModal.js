@@ -33,16 +33,16 @@ export default function PreferenceModal({ onDone }) {
                                 <span>{c.basis}</span>
                             </CandBasis>
                             <BtnRow style={{ marginTop: "10px" }}>
-                                <Btn sm primary={actions[c.field] === "save"}    ghost={actions[c.field] !== "save"}    onClick={() => setAction(c.field, "save")}>앞으로도 적용</Btn>
-                                <Btn sm primary={actions[c.field] === "one_time"} ghost={actions[c.field] !== "one_time"} onClick={() => setAction(c.field, "one_time")}>이번만</Btn>
-                                <Btn sm warn={actions[c.field] === "dismiss"}   ghost={actions[c.field] !== "dismiss"}  onClick={() => setAction(c.field, "dismiss")}>무시</Btn>
+                                <Btn $sm $primary={actions[c.field] === "save"}    $ghost={actions[c.field] !== "save"}    onClick={() => setAction(c.field, "save")}>앞으로도 적용</Btn>
+                                <Btn $sm $primary={actions[c.field] === "one_time"} $ghost={actions[c.field] !== "one_time"} onClick={() => setAction(c.field, "one_time")}>이번만</Btn>
+                                <Btn $sm $warn={actions[c.field] === "dismiss"}   $ghost={actions[c.field] !== "dismiss"}  onClick={() => setAction(c.field, "dismiss")}>무시</Btn>
                             </BtnRow>
                         </CandCard>
                     ))}
 
                     <ModalFooter>
                         <Muted>'앞으로도 적용'만 User Preference Store에 저장됩니다</Muted>
-                        <Btn primary onClick={onDone}>선택 저장 후 닫기</Btn>
+                        <Btn $primary onClick={onDone}>선택 저장 후 닫기</Btn>
                     </ModalFooter>
                     <MockNote>※ 목데이터 · BE /feedback/analyze 연동 시 실제 후보로 교체</MockNote>
                 </ModalBody>
