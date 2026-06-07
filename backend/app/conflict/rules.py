@@ -55,6 +55,10 @@ def _jaccard(a: set[str], b: set[str]) -> float:
 def _parse_date(value: Any) -> date | None:
     if value is None:
         return None
+    # datetime 은 date 의 서브클래스라 isinstance(date) 를 통과해버린다.
+    # 그대로 두면 date 와 == 비교가 어긋나므로 먼저 .date() 로 떨군다.
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, date):
         return value
     try:
@@ -76,6 +80,9 @@ def check_calendar_conflict(
         return result  # 시간/일자 없으면 겹침 판정 불가
     new_dur = item.duration_estimate or _DEFAULT_DURATION_MIN
     new_end = new_start + new_dur
+    # 가정: 같은 날짜 안에서만 겹침을 본다(자정 넘김 미처리). 23:00+120분처럼
+    # new_end 가 1440 을 넘겨 다음 날로 흘러도 다음 날 일정과는 대조하지 않는다.
+    # 데모 일정(60분)에선 발생하지 않는다. 다중일 인터벌은 후순위(review-result.md).
 
     conflicts: list[dict[str, Any]] = []
     for ev in existing:

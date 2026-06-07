@@ -11,6 +11,8 @@
 
 import os
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 _DEFAULT_DB_PATH = Path(__file__).parent.parent.parent / "storage.db"
@@ -80,15 +82,26 @@ def db_path() -> Path:
     return _DEFAULT_DB_PATH
 
 
-def get_conn() -> sqlite3.Connection:
-    """스키마가 보장된 커넥션을 돌려준다 (멱등)."""
+@contextmanager
+def get_conn() -> Iterator[sqlite3.Connection]:
+    """스키마가 보장된 커넥션을 컨텍스트로 돌려준다 (멱등).
+
+    sqlite3.Connection 자체를 `with` 로 쓰면 commit/rollback 만 하고 close 는
+    하지 않아 호출마다 커넥션이 누수된다. 여기서 finally 로 명시 close 하므로
+    `with get_conn() as conn:` 호출은 블록 종료 시 항상 닫힌다.
+    쓰기 함수는 블록 안에서 conn.commit() 을 명시 호출해야 한다(여기선 자동 커밋 안 함).
+    """
     conn = sqlite3.connect(db_path())
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
     conn.commit()
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def init_db() -> None:
     """스키마만 생성하고 닫는다 (앱 startup / 테스트 fixture 용)."""
-    get_conn().close()
+    with get_conn():
+        pass
