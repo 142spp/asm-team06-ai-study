@@ -32,6 +32,7 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
     "date": "YYYY-MM-DD|null",
     "time": "HH:MM|null",
     "priority": "high|medium|low",
+    "mitigation": "string|null",
     "source_sentence": "근거 원문",
     "recommended_tool": "create_task|create_calendar_event|create_memo|create_risk_log",
     "type_certainty": 0.0-1.0,
@@ -56,7 +57,8 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
   date_status="vague" 또는 needs_base_event=true로 두고 정확한 날짜를 지어내지 마라.
 - "안 되면", "실패하면", "대체", "Mock"처럼 실패 조건과 대응 방안이 함께 나오면
   task가 아니라 risk로 분류하고 recommended_tool="create_risk_log"를 사용한다.
-  대응 방안을 별도 task로 만들지 마라.
+  대응 방안을 별도 task로 만들지 말고 그 risk 항목의 mitigation 에 넣는다.
+  대응 방안이 없으면 mitigation=null. (risk 외 유형은 mitigation=null)
 - 한 입력에 여러 항목이 섞이면 독립 항목으로 분해한다.
 - 실행 항목이 전혀 없으면 items=[] (빈 배열)."""
 
