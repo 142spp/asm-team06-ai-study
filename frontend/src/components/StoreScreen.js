@@ -129,7 +129,7 @@ export default function StoreScreen() {
                     </>
                 )}
 
-                <MockNote style={{ marginTop: "16px" }}>※ 저장소 목데이터 · GET /items API 구현 시 교체</MockNote>
+                <MockNote style={{ marginTop: "16px" }}>※ 저장소 목데이터 · GET /storage/{'{kind}'} 연동 시 교체</MockNote>
             </Card>
         </div>
     );
