@@ -32,6 +32,8 @@ uv run --directory backend pytest    # 테스트
 
 `fastapi[standard]`에 uvicorn/fastapi-cli가 포함되므로 별도 추가하지 않는다.
 저장소 경로는 `ACTION_ROUTER_DB_PATH` env var 로 바꿀 수 있다(기본 `backend/storage.db`).
+FE 개발 서버 origin은 기본 `http://localhost:3000`, `http://127.0.0.1:3000`을 허용한다.
+Tailscale 등 추가 origin은 `.env`의 `ACTION_ROUTER_CORS_ORIGINS`에 쉼표 구분으로 설정한다.
 HITL은 LangGraph `interrupt()`+MemorySaver(thread_id=session_id)로, `/run`(정지) -> `/resume`(재개)로 표현한다.
 시연용 기존 데이터는 `POST /mock/seed` 로 명시 초기화한다(일반 경로 자동 실행 없음).
 

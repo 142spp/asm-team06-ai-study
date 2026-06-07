@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import os
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -10,6 +12,13 @@ from app.logging_config import setup_logging
 from app.storage.db import init_db
 
 setup_logging()
+
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv("ACTION_ROUTER_CORS_ORIGINS")
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
 @asynccontextmanager
@@ -24,7 +33,7 @@ app = FastAPI(title="Action Router Agent", lifespan=lifespan)
 # 6-1 분석
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_cors_origins(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
