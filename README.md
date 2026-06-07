@@ -64,21 +64,6 @@ uv run --directory backend fastapi dev app/main.py
 
 원문과 Solar raw 응답까지 로그로 보고 싶을 때만 `ACTION_ROUTER_LOG_PAYLOADS=1`을 추가한다.
 
-### Tailscale / 원격 시연
-
-미니PC에서 서버를 띄우고 노트북 브라우저로 접속할 때는 `127.0.0.1`이 아니라 미니PC의 Tailscale IP를 사용한다.
-
-```bash
-# backend
-export ACTION_ROUTER_CORS_ORIGINS="http://<mini-pc-tailscale-ip>:3000"
-uv run --directory backend fastapi dev app/main.py --host 0.0.0.0
-
-# frontend
-HOST=0.0.0.0 npm start --prefix frontend
-```
-
-노트북 브라우저에서 `http://<mini-pc-tailscale-ip>:3000`으로 접속한다.
-
 ## 현재 데모 흐름
 
 1. FE 입력 화면에서 회의록/메모/공지사항을 붙여넣는다.
