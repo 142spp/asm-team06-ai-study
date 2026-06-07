@@ -7,18 +7,19 @@ import { theme, radius } from "../styles/theme";
 // candidates: 그래프 2차 interrupt 의 선호 후보 [{ field, original, preferred, pattern_type, log_id }]
 // 후보가 없으면(그래프가 바로 완료) 안내 후 건너뛴다. 목데이터는 쓰지 않는다.
 export default function PreferenceModal({ sessionId, candidates = [], onDone }) {
+    // 후보는 index 로 식별한다(여러 항목이 같은 field 를 수정하면 field 가 중복될 수 있음).
     const [actions, setActions] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
-    function setAction(field, action) {
-        setActions((p) => ({ ...p, [field]: action }));
+    function setAction(idx, action) {
+        setActions((p) => ({ ...p, [idx]: action }));
     }
 
     async function handleSave() {
         // 모든 후보를 선택된 action 으로 2차 resume 에 보낸다(미선택은 dismiss).
-        const preference_choices = candidates.map((c) => ({
+        const preference_choices = candidates.map((c, i) => ({
             field: c.field,
-            action: actions[c.field] || "dismiss",
+            action: actions[i] || "dismiss",
             original: c.original,
             preferred: c.preferred,
             log_id: c.log_id,
@@ -70,8 +71,8 @@ export default function PreferenceModal({ sessionId, candidates = [], onDone }) 
                         <Muted>(승인 전엔 장기 저장 안 함)</Muted>
                     </ModalDesc>
 
-                    {candidates.map((c) => (
-                        <CandCard key={c.field}>
+                    {candidates.map((c, i) => (
+                        <CandCard key={i}>
                             <CandRule>
                                 {`"${c.field}" 필드: ${JSON.stringify(c.original)} → ${JSON.stringify(c.preferred)}`}
                             </CandRule>
@@ -82,9 +83,9 @@ export default function PreferenceModal({ sessionId, candidates = [], onDone }) 
                                 </CandBasis>
                             )}
                             <BtnRow style={{ marginTop: "10px" }}>
-                                <Btn $sm $primary={actions[c.field] === "save"}     $ghost={actions[c.field] !== "save"}     onClick={() => setAction(c.field, "save")}>앞으로도 적용</Btn>
-                                <Btn $sm $primary={actions[c.field] === "one_time"} $ghost={actions[c.field] !== "one_time"} onClick={() => setAction(c.field, "one_time")}>이번만</Btn>
-                                <Btn $sm $warn={actions[c.field] === "dismiss"}     $ghost={actions[c.field] !== "dismiss"}   onClick={() => setAction(c.field, "dismiss")}>무시</Btn>
+                                <Btn $sm $primary={actions[i] === "save"}     $ghost={actions[i] !== "save"}     onClick={() => setAction(i, "save")}>앞으로도 적용</Btn>
+                                <Btn $sm $primary={actions[i] === "one_time"} $ghost={actions[i] !== "one_time"} onClick={() => setAction(i, "one_time")}>이번만</Btn>
+                                <Btn $sm $warn={actions[i] === "dismiss"}     $ghost={actions[i] !== "dismiss"}   onClick={() => setAction(i, "dismiss")}>무시</Btn>
                             </BtnRow>
                         </CandCard>
                     ))}

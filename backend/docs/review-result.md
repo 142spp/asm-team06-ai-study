@@ -111,3 +111,29 @@
 - `handleReviewDone(approved, excluded)` 가 ReviewScreen 의 `onDone(.., modifiedPairs)` 3번째 인자를 무시 -
   decisions 는 `item._modified` 로 직접 구성하므로 기능 영향 없음(dead parameter).
 - 기존 `/feedback/*` 라우터 보조 유지 - 현재 FE 미사용이라 모순 없음(하위호환 목적).
+
+## 전체 시스템 리뷰 (4영역 병렬, `feat/single-graph-6-3`)
+
+BE 그래프/HITL, BE 분석/LLM/충돌, BE 저장소/피드백/API, FE 전체를 code-reviewer 4개로 병렬 검토.
+
+### 수정 완료 (내 변경 내 실제 버그)
+
+| # | 위치 | 내용 | 처리 |
+|---|------|------|------|
+| 1 | FE `PreferenceModal.js` | 후보 key/actions 를 `c.field` 로 써서 여러 항목이 같은 field 를 수정하면 React key 중복 + action 덮어쓰기 + preference_choices 중복. | index 기반 key/actions 로 변경. |
+| 2 | FE `ReviewScreen.js` | App 이 `onDone` 3번째 인자(modifiedPairs)를 무시하면서 `getModifiedPairs`/`originalMap` 이 dead code(원본 diff 는 그래프가 계산). | dead code 제거, `onDone(approved, excluded)` 로 정리. |
+| 3 | BE `llm/solar.py` | reasoning_effort 가드가 `!= "solar-pro"` 블랙리스트라 solar-mini 등에 보내면 422. | `{solar-pro2, solar-pro3}` 화이트리스트로 변경. |
+
+### 실제 이슈지만 기존(6-1) 코드 - 별도 처리 권장 (이 브랜치 범위 밖)
+
+| 위치 | 내용 | 확신도 |
+|------|------|--------|
+| `analysis/completeness.py`+`schemas/analysis.py`+`llm/solar.py` 프롬프트 | risk 의 `mitigation`(대응 방안)이 프롬프트/LLMItem/finalize 어디서도 추출/전달 안 됨 -> `risk_logs.mitigation` 항상 None. data-model/planning 계약 위반. | 95 |
+| `analysis/pipeline.py` `_call_with_retry` | except 가 (ValidationError/ValueError/KeyError)만 잡아 httpx/Upstage API 오류 시 `_analysis_failed` Pending 폴백이 아니라 HTTP 500. | 90 |
+
+### 후순위/오탐 (조치 안 함)
+
+- `agent/nodes/confirm.py` + `preferences.db`(store/matcher)는 그래프 미등록 dead/legacy. 활성 선호 경로는 feedback.db 로 일관(분석 파이프라인도 `load_user_preferences`=feedback.db). 기능 disconnect 아님 -> 추후 레거시 제거 대상.
+- `/run` 동일 session_id 재호출 시 candidate_log 중복 INSERT(append 로그라 무해), `_to_response` unknown reason 폴백, `/resume` reload 후 세션 부재 시 500(코드 주석에 알려진 한계) -> 운영 전환 시 `graph.get_state` 가드. 데모 범위 밖.
+- StoreScreen `r.source`(BE 컬럼 없음->항상 "—"), `useEffect` deps 의 rowsByTab -> PR #20(FE) 영역, 기능 영향 낮음.
+- `mock/index.js` 의 mockAgentLog/mockPreferenceCandidates 는 미사용 dead export -> 정리 권장.

@@ -18,6 +18,9 @@ from app.schemas.analysis import ContextBundle
 
 logger = get_logger("llm.solar")
 
+# reasoning_effort 파라미터를 지원하는 모델(화이트리스트). 그 외 모델에 보내면 422.
+_REASONING_EFFORT_MODELS = {"solar-pro2", "solar-pro3"}
+
 _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하는 분석기다.
 반드시 아래 JSON 스키마만 출력한다(설명/마크다운 금지).
 
@@ -63,10 +66,11 @@ class SolarLLM:
         from langchain_upstage import ChatUpstage  # lazy
 
         self._model = os.getenv("SOLAR_MODEL", "solar-pro")
-        effort = os.getenv("SOLAR_REASONING_EFFORT")  # "high"|"low"|None
+        effort = os.getenv("SOLAR_REASONING_EFFORT")  # "high"|"medium"|"low"|None
         logger.info("SolarLLM init: model=%s reasoning_effort=%s", self._model, effort)
         kwargs: dict = {"model": self._model}
-        if effort and self._model != "solar-pro":  # reasoning_effort는 pro2/pro3 전용
+        # reasoning_effort 는 reasoning 지원 모델만 받는다(미지원 모델에 보내면 422).
+        if effort and self._model in _REASONING_EFFORT_MODELS:
             kwargs["reasoning_effort"] = effort
         self._llm = ChatUpstage(**kwargs)
 
