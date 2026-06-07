@@ -47,7 +47,7 @@ export const mockPreferenceCandidates = [
     },
 ];
 
-// ===== 저장소 (GET /items API 구현 시 교체) =====
+// ===== 저장소 (GET /storage/{kind} 연동 시 교체) =====
 export const mockStore = {
     tasks: [
         { id: 1, title: "발표자료 만들기",  assignee: "박성종", due: "06-04(목)", priority: "high",   status: "진행 전" },

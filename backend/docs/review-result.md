@@ -40,7 +40,7 @@
 | `state.py` AgentState | Annotated reducer 없음. 현재 선형 그래프라 안전하나, 향후 parallel fan-out 으로 두 노드가 같은 key 쓰면 InvalidUpdateError. | fan-out 도입 시 해당 key 에 reducer 추가. |
 | `run.py` `/storage/{kind}`, `/mock/run` 404 detail | 내부 테이블/시나리오 이름을 에러 메시지로 노출(정보 노출). | 내부 데모 API 라 경미. 외부 노출 시 일반화된 메시지로. |
 | `schemas/run.py` RunResponse | summary(dict)/final_output(dict\|None) 무타입 passthrough -> 비 JSON 값 stash 시 직렬화 오류 가능. | 6-3 계약 확정 후 타입 모델로 승격. |
-| `analysis.py` | raw_input 만 오고 items 없으면 빈 items 반환 -> 전체 silent no-op(WARNING 로그만). | 6-1(LLM 분석) 구현 시 교체 예정인 placeholder. 구현 시 NotImplemented/4xx 고려. |
+| `analysis.py` | `/run`에 raw_input 만 오고 items 없으면 빈 items 반환 -> 전체 silent no-op(WARNING 로그만). | 현재 FE는 `/analyze/` -> `/run` 순서라 정상 경로는 안전. `/run` 단일 호출 분석을 열면 4xx 또는 분석 연결 필요. |
 | `conflict_check.py` | `{it["id"]: ...}` 가 모든 item 에 id 존재 가정(KeyError latent). tool_selection 이 항상 ensure_id 하므로 현재 안전. | 노드 간 암묵 순서 의존. 직접 호출/테스트 시 주의. |
 | `conflict_check.py` | calendar/task 항목이 없어도 load_calendar_events + load_tasks 무조건 호출(불필요 I/O). | 효율 minor. selections 타입에 따라 지연 로드 가능. |
 

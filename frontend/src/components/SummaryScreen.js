@@ -6,9 +6,19 @@ import { theme } from "../styles/theme";
 const TYPE_LABEL  = { task: "할 일", calendar: "일정", memo: "메모", risk: "리스크", pending: "보류" };
 const STORE_LABEL = { task: "Task Store", calendar: "Calendar", memo: "Memo Store", risk: "Risk Log", pending: "Pending" };
 
-export default function SummaryScreen({ approved, excluded, onGoStore, onRestart }) {
+function displaySchedule(item) {
+    const date = item.type === "task" ? item.due_date : item.date;
+    if (date && item.time) return `${date} ${item.time}`;
+    return date || item.time || "—";
+}
+
+export default function SummaryScreen({ approved, excluded, executionResult, onGoStore, onRestart }) {
     const saved   = approved.filter((it) => it.type !== "pending");
     const pending = approved.filter((it) => it.type === "pending");
+    const summary = executionResult?.summary;
+    const savedCount = summary?.executed ?? saved.length;
+    const pendingCount = summary?.failed ?? pending.length;
+    const excludedCount = summary?.excluded ?? excluded.length;
 
     return (
         <div>
@@ -20,9 +30,9 @@ export default function SummaryScreen({ approved, excluded, onGoStore, onRestart
 
             <Card>
                 <StatGrid>
-                    <Stat><StatBig $variant="ok">{saved.length}</StatBig><StatCap>✓ 저장 성공</StatCap></Stat>
-                    <Stat><StatBig $variant="pend">{pending.length}</StatBig><StatCap>⏸ 보류(Pending)</StatCap></Stat>
-                    <Stat><StatBig $variant="skip">{excluded.length}</StatBig><StatCap>— 제외</StatCap></Stat>
+                    <Stat><StatBig $variant="ok">{savedCount}</StatBig><StatCap>✓ 저장 성공</StatCap></Stat>
+                    <Stat><StatBig $variant="pend">{pendingCount}</StatBig><StatCap>⏸ 보류(Pending)</StatCap></Stat>
+                    <Stat><StatBig $variant="skip">{excludedCount}</StatBig><StatCap>— 제외</StatCap></Stat>
                 </StatGrid>
 
                 {saved.length > 0 && (
@@ -36,7 +46,7 @@ export default function SummaryScreen({ approved, excluded, onGoStore, onRestart
                                         <td><TypeBadge type={item.type}>{TYPE_LABEL[item.type]}</TypeBadge></td>
                                         <td>{item.title}</td>
                                         <td>{item.assignee || "—"}</td>
-                                        <td>{item.date || item.time || "—"}</td>
+                                        <td>{displaySchedule(item)}</td>
                                         <td>{STORE_LABEL[item.type]}</td>
                                     </tr>
                                 ))}
@@ -71,7 +81,11 @@ export default function SummaryScreen({ approved, excluded, onGoStore, onRestart
                     </BtnRow>
                 </NextRow>
 
-                <MockNote>※ 저장 실행(POST /route) API 미구현 · 프론트 state 기반 목 처리</MockNote>
+                {executionResult ? (
+                    <MockNote>※ 저장 실행 결과는 POST /resume 응답 기준입니다.</MockNote>
+                ) : (
+                    <MockNote>※ 저장 실행 결과 없음 · 프론트 state 기준으로 표시 중</MockNote>
+                )}
             </Card>
         </div>
     );

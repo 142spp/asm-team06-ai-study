@@ -16,10 +16,38 @@ const WHY_TEXT = {
     pending:  "날짜 모호 또는 confidence 낮음 → 보류.",
 };
 
+function displayDate(item) {
+    if (item.type === "task") return item.due_date;
+    return item.date;
+}
+
+function conflictView(item) {
+    if (item.conflict?.has_conflict) {
+        return {
+            real: true,
+            type: item.conflict.kind === "calendar_overlap" ? "time_conflict" : "duplicate",
+            warning: item.conflict.warning,
+            alternatives: item.conflict.suggested_alternatives || [],
+        };
+    }
+    return mockConflicts[item.title] || null;
+}
+
 export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
     const [editing, setEditing] = useState(false);
     const [editData, setEditData] = useState({ ...item });
-    const conflict = mockConflicts[item.title];
+    const conflict = conflictView(item);
+    const dateValue = displayDate(item);
+    const editDateValue = editData.type === "task" ? editData.due_date : editData.date;
+    const selectedTool = item.selection?.selected_tool || item.recommended_tool;
+
+    function handleDateChange(value) {
+        if (editData.type === "task") {
+            setEditData({ ...editData, due_date: value, date: null });
+            return;
+        }
+        setEditData({ ...editData, date: value, due_date: null });
+    }
 
     function handleSaveEdit() {
         onEdit(item, editData);
@@ -39,7 +67,7 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
 
             <ItemMeta>
                 <span>담당 <b>{item.assignee || "—"}</b></span>
-                <span>마감 <b>{item.date || (item.date_status === "vague" ? "모호" : "—")}</b></span>
+                <span>마감 <b>{dateValue || (item.needs_confirmation ? "확인 필요" : "—")}</b></span>
                 {item.time && <span>시간 <b>{item.time}</b></span>}
             </ItemMeta>
 
@@ -49,23 +77,23 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                     <WhyIc>↳ 이유</WhyIc>
                     <span>{WHY_TEXT[item.type]}</span>
                 </Why>
-                {item.recommended_tool && (
-                    <ToolRow>추천 Tool: <code>{item.recommended_tool}</code></ToolRow>
+                {selectedTool && (
+                    <ToolRow>추천 Tool: <code>{selectedTool}</code></ToolRow>
                 )}
             </ReasonBox>
 
             {conflict?.type === "time_conflict" && (
                 <WarnBox>
-                    <b>⚠ 일정 충돌</b> · 기존 일정 「{conflict.with}」과 시간 겹침 <MockBadge />
+                    <b>⚠ 일정 충돌</b> · {conflict.warning || `기존 일정 「${conflict.with}」과 시간 겹침`} {!conflict.real && <MockBadge />}
                     <br />
-                    <b>대체 경로 →</b> ① {conflict.suggestion} 제안 &nbsp; ② 수정 &nbsp; ③ Pending 보류
+                    <b>대체 경로 →</b> {conflict.real ? conflict.alternatives.join(" · ") : `① ${conflict.suggestion} 제안  ② 수정  ③ Pending 보류`}
                 </WarnBox>
             )}
             {conflict?.type === "duplicate" && (
                 <WarnBox>
-                    <b>⚠ Task 중복</b> · 기존 「{conflict.with}」과 중복 후보 <MockBadge />
+                    <b>⚠ Task 중복</b> · {conflict.warning || `기존 「${conflict.with}」과 중복 후보`} {!conflict.real && <MockBadge />}
                     <br />
-                    <b>대체 경로 →</b> ① 새로 생성 &nbsp; ② 병합 제안 &nbsp; ③ 제외
+                    <b>대체 경로 →</b> {conflict.real ? conflict.alternatives.join(" · ") : "① 새로 생성  ② 병합 제안  ③ 제외"}
                 </WarnBox>
             )}
 
@@ -100,7 +128,7 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                         </EditField>
                         <EditField>
                             <span>마감일</span>
-                            <input value={editData.date || ""} onChange={(e) => setEditData({ ...editData, date: e.target.value })} />
+                            <input value={editDateValue || ""} onChange={(e) => handleDateChange(e.target.value)} />
                         </EditField>
                         <EditField>
                             <span>시간</span>

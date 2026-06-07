@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { analyzeText } from "../api/analyze";
+import { analyzeText, runItems } from "../api/analyze";
 import { Card, Btn, BtnRow, ScreenHead, StepNum, ScreenTitle, ScreenSub } from "../styles/common";
 import { theme, radius } from "../styles/theme";
 
@@ -15,6 +15,27 @@ function getTodayKST() {
         .replace(/\. /g, "-").replace(".", "");
 }
 
+function newSessionId() {
+    return `session-${Date.now().toString(36)}`;
+}
+
+function flattenRunResult(analysisResult, runResult) {
+    if (runResult.status !== "awaiting_approval") {
+        return { ...analysisResult, session_id: runResult.session_id, run_result: runResult };
+    }
+    return {
+        ...analysisResult,
+        session_id: runResult.session_id,
+        run_result: runResult,
+        items: runResult.reviewables.map((reviewable) => ({
+            ...reviewable.item,
+            selection: reviewable.selection,
+            conflict: reviewable.conflict,
+        })),
+        skipped: runResult.skipped,
+    };
+}
+
 export default function InputScreen({ onAnalyzeDone }) {
     const [text, setText] = useState("");
     const [loading, setLoading] = useState(false);
@@ -25,8 +46,11 @@ export default function InputScreen({ onAnalyzeDone }) {
         setLoading(true);
         setError(null);
         try {
+            const sessionId = newSessionId();
             const result = await analyzeText(text, getTodayKST());
-            onAnalyzeDone(result, text);
+            const runResult = await runItems(sessionId, result.items || [], text);
+            const routedResult = flattenRunResult(result, runResult);
+            onAnalyzeDone(routedResult, text);
         } catch (e) {
             setError("분석에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.");
         } finally {

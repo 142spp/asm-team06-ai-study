@@ -1,10 +1,10 @@
-"""단일 LangGraph 조립 (6-1 mock -> 6-2 -> 6-3 seam).
+"""단일 LangGraph 조립 (6-1 Item 입력 -> 6-2 -> 6-3 seam).
 
 동기식 사용자 승인은 LangGraph `interrupt()`로 그래프 중간에서 정지하고,
 checkpointer(MemorySaver) + thread_id 로 상태를 보관했다가 resume 으로 재개한다.
 
 흐름:
-  START -> analysis(6-1 mock) -> tool_selection -> conflict_check
+  START -> analysis(pass-through) -> tool_selection -> conflict_check
         -> [reviewables 있으면] request_approval(interrupt) -> execution
         -> feedback_entry(6-3 seam) -> END
         ([reviewables 없으면] conflict_check -> feedback_entry 로 바로)

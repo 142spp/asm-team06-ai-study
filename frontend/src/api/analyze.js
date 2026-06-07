@@ -1,6 +1,11 @@
 // POST /analyze 실제 연동
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+function defaultApiUrl() {
+    if (typeof window === "undefined") return "http://localhost:8000";
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+}
+
+const API_URL = process.env.REACT_APP_API_URL || defaultApiUrl();
 
 export async function analyzeText(rawText, baseDate) {
     const res = await fetch(`${API_URL}/analyze/`, {
@@ -9,6 +14,32 @@ export async function analyzeText(rawText, baseDate) {
         body: JSON.stringify({ raw_text: rawText, base_date: baseDate }),
     });
     if (!res.ok) throw new Error("분석 요청 실패");
+    return res.json();
+}
+
+export async function runItems(sessionId, items, rawInput) {
+    const res = await fetch(`${API_URL}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, items, raw_input: rawInput }),
+    });
+    if (!res.ok) throw new Error("라우팅 요청 실패");
+    return res.json();
+}
+
+export async function resumeRun(sessionId, decisions) {
+    const res = await fetch(`${API_URL}/resume`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, decisions }),
+    });
+    if (!res.ok) throw new Error("승인 실행 실패");
+    return res.json();
+}
+
+export async function fetchStorage(kind) {
+    const res = await fetch(`${API_URL}/storage/${kind}`);
+    if (!res.ok) throw new Error("저장소 조회 실패");
     return res.json();
 }
 

@@ -6,16 +6,23 @@ planning.md 필수 시나리오를 키워드로 식별해 결정적 JSON을 돌�
 """
 
 from app.schemas.analysis import ContextBundle
+from app.logging_config import get_logger
+
+logger = get_logger("llm.fake")
 
 
 class FakeLLM:
     def analyze(self, *, raw_text: str, base_date: str, context: ContextBundle) -> dict:
         if "리허설" in raw_text:
+            logger.info("FakeLLM scenario selected: multi_items")
             return _SCENARIO_1
         if "멘토님" in raw_text:
+            logger.info("FakeLLM scenario selected: vague_risk")
             return _SCENARIO_2
         if "회의" in raw_text:
+            logger.info("FakeLLM scenario selected: conflict")
             return _SCENARIO_3
+        logger.info("FakeLLM scenario selected: fallback_memo")
         return {
             "items": [{
                 "type": "memo", "title": raw_text[:30] or "메모",

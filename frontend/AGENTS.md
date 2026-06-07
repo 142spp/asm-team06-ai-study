@@ -32,7 +32,10 @@ npm start
 
 - 현재 의존성: `react`, `react-dom`, `react-scripts`.
 - 상태 관리/라우팅 라이브러리는 필요 시 추가하고 `docs/decisions.md`에 기록한다.
-- BE API 주소는 `.env`의 `REACT_APP_API_URL`로 관리한다 (기본값: `http://localhost:8000`).
+- BE API 주소는 `.env`의 `REACT_APP_API_URL`로 관리한다.
+  기본값은 현재 접속한 FE 호스트의 8000번 포트다
+  (예: `http://localhost:3000` -> `http://localhost:8000`,
+  `http://<tailscale-ip>:3000` -> `http://<tailscale-ip>:8000`).
 
 ## 코드 스타일
 

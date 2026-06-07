@@ -21,6 +21,12 @@ def conflict_check_node(state: dict) -> dict:
 
     calendar_events = load_calendar_events()
     tasks = load_tasks()
+    logger.info(
+        "분기: conflict_check 시작 - selections=%d stored_calendar=%d stored_tasks=%d",
+        len(selections),
+        len(calendar_events),
+        len(tasks),
+    )
 
     conflicts: list[dict] = []
     reviewables: list[dict] = []
@@ -34,6 +40,14 @@ def conflict_check_node(state: dict) -> dict:
         conflicts.append(result.model_dump(mode="json"))
         if result.has_conflict:
             conflict_count += 1
+            logger.warning(
+                "conflict_check: conflict item=%s kind=%s warning=%s",
+                sel.item_id,
+                result.kind,
+                result.warning,
+            )
+        else:
+            logger.debug("conflict_check: no conflict item=%s type=%s", sel.item_id, item.type)
         reviewables.append(
             ReviewableItem(
                 item=item, selection=sel, conflict=result

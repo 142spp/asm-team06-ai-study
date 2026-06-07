@@ -87,5 +87,5 @@ create_memo->memos, create_risk_log->risk_logs, save_to_pending->pending_queue.
 
 ## 4. Mock 데이터
 
-6-1 미구현 동안 6-2 입력을 대신한다. 정본: `backend/app/mock_data/sample_inputs.py`.
+6-2 단독 테스트/데모에서 `/analyze/` 결과 Item 입력을 대신한다. 정본: `backend/app/mock_data/sample_inputs.py`.
 기준일 2026-06-05 고정. 시나리오 3종: `multi`(다항목), `vague_risk`(보류+리스크), `conflict`(일정 충돌).

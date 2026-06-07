@@ -78,6 +78,13 @@ def _execute_one(item: Item, item_id: str) -> ExecutionResult:
 
     # 경량 재검증: echo 된 tool 을 믿지 않고 type 에서 재도출.
     tool = TYPE_TO_TOOL[item.type]
+    logger.info(
+        "execution approve start: item=%s type=%s tool=%s title=%s",
+        item_id,
+        item.type,
+        tool,
+        item.title,
+    )
 
     # 필수 필드 재확인 -> 누락 시 pending 폴백.
     missing = _missing_required(item)
@@ -131,6 +138,15 @@ def execution_node(state: dict) -> dict:
         for r in state.get("reviewables", [])
     }
     decisions = [ApprovalDecision.model_validate(d) for d in state.get("decisions", [])]
+    action_counts: dict[str, int] = {}
+    for decision in decisions:
+        action_counts[decision.action.value] = action_counts.get(decision.action.value, 0) + 1
+    logger.info(
+        "분기: execution 시작 - reviewables=%d decisions=%d actions=%s",
+        len(reviewables),
+        len(decisions),
+        action_counts,
+    )
 
     results: list[ExecutionResult] = []
     for decision in decisions:

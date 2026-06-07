@@ -8,6 +8,7 @@ import ReviewScreen from "./components/ReviewScreen";
 import PreferenceModal from "./components/PreferenceModal";
 import SummaryScreen from "./components/SummaryScreen";
 import StoreScreen from "./components/StoreScreen";
+import { resumeRun } from "./api/analyze";
 
 const STEPS = [
     { id: "input",      label: "입력",      num: 1 },
@@ -105,6 +106,7 @@ export default function App() {
     const [rawText, setRawText] = useState("");
     const [approved, setApproved] = useState([]);
     const [excluded, setExcluded] = useState([]);
+    const [executionResult, setExecutionResult] = useState(null);
 
     function handleAnalyzeDone(result, text) {
         setAnalyzeResult(result);
@@ -112,9 +114,30 @@ export default function App() {
         setStep("review");
     }
 
-    function handleReviewDone(approvedItems, excludedItems) {
+    function cleanItem(item) {
+        const { selection, conflict, _modified, ...cleaned } = item;
+        return cleaned;
+    }
+
+    async function handleReviewDone(approvedItems, excludedItems) {
         setApproved(approvedItems);
         setExcluded(excludedItems);
+        setExecutionResult(null);
+        if (analyzeResult?.session_id) {
+            const decisions = [
+                ...approvedItems.map((item) => ({
+                    item_id: item.id,
+                    action: "approve",
+                    modified_item: item._modified ? cleanItem(item) : undefined,
+                })),
+                ...excludedItems.map((item) => ({
+                    item_id: item.id,
+                    action: "exclude",
+                })),
+            ];
+            const result = await resumeRun(analyzeResult.session_id, decisions);
+            setExecutionResult(result);
+        }
         setStep("preference");
     }
 
@@ -128,6 +151,7 @@ export default function App() {
         setRawText("");
         setApproved([]);
         setExcluded([]);
+        setExecutionResult(null);
     }
 
     return (
@@ -182,6 +206,7 @@ export default function App() {
                         <SummaryScreen
                             approved={approved}
                             excluded={excluded}
+                            executionResult={executionResult}
                             onGoStore={() => setStep("store")}
                             onRestart={handleRestart}
                         />
@@ -192,4 +217,3 @@ export default function App() {
         </>
     );
 }
-

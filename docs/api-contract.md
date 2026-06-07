@@ -53,7 +53,7 @@ feat/preferences 에서 별도 정의되며, 향후 같은 그래프로 흡수 �
 ```
 
 ### POST /run
-6-1 항목(또는 mock)을 받아 그래프 시작. 승인 지점에서 정지.
+6-1 Item(`/analyze/` 출력 또는 데모 샘플)을 받아 그래프 시작. 승인 지점에서 정지.
 
 요청 (RunRequest):
 ```json
@@ -65,7 +65,8 @@ feat/preferences 에서 별도 정의되며, 향후 같은 그래프로 흡수 �
 }
 ```
 - `session_id` 는 그래프 세션(thread_id). resume 시 동일 값 사용.
-- `items` 는 6-1 출력(현재 mock). `raw_input`(비정형 텍스트) 필드는 6-1 구현 시 사용할 자리.
+- `items` 는 `/analyze/` 출력 Item. 현재 FE 흐름은 `/analyze/` -> `/run` 순서다.
+- `raw_input`(비정형 텍스트) 필드는 향후 `/run` 단일 호출로 직접 분석할 때 사용할 확장 자리다.
 
 응답 (RunResponse, awaiting_approval):
 ```json
