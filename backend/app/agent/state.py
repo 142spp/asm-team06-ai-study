@@ -5,9 +5,9 @@ from typing import Any, TypedDict
 class AgentState(TypedDict, total=False):
     # --- 공통 ---
     session_id: str                  # = checkpointer thread_id
-    raw_input: str                   # 6-1 입력(비정형 텍스트). 현재 6-1은 mock.
+    raw_input: str                   # /run 직접 분석 확장 자리. 현재 FE는 /analyze/ 후 items 전달.
 
-    # --- 6-1 분석 (현재 mock) ---
+    # --- 6-1 분석 산출 ---
     items: list[dict[str, Any]]      # 분석 산출 항목 (Item.model_dump)
 
     # --- 6-2 라우팅/검증/승인 ---

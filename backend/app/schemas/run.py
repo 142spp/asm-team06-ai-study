@@ -19,11 +19,11 @@ class RunStatus(str, Enum):
 
 
 class RunRequest(BaseModel):
-    """POST /run 요청. items 는 6-1 출력(현재 mock). session_id 가 thread_id."""
+    """POST /run 요청. items 는 /analyze/ 출력 Item. session_id 가 thread_id."""
 
     session_id: str
     items: list[Item] = Field(default_factory=list)
-    raw_input: str | None = None  # 6-1 구현 시 비정형 텍스트 입력 자리
+    raw_input: str | None = None  # 향후 /run 직접 분석 확장 자리
 
 
 class ResumeRequest(BaseModel):

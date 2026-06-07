@@ -2,7 +2,8 @@
 
 LangGraph 흐름, LLM 입출력 계약, 모델 선택, 외부 연동(향후)을 담는다.
 
-현재 구현 범위: 6-1 mock + 6-2 라우팅/검증/승인(`backend/app/agent/`). 6-1 분석은 mock,
+현재 구현 범위: 6-1 `/analyze/` + 6-2 라우팅/검증/승인(`backend/app/agent/`).
+그래프의 `analysis_node` 는 `/analyze/` 결과 Item 을 6-2 로 넘기는 연결부이며,
 6-3 피드백/선호는 feat/preferences 에 있고 그래프 연결부(seam) 뒤에 흡수 예정.
 전체 3단계 흐름은 [planning.md](planning.md) 6장 참조.
 
@@ -13,7 +14,7 @@ LangGraph 흐름, LLM 입출력 계약, 모델 선택, 외부 연동(향후)을 
 상태를 보관했다가 `resume` 으로 재개한다. 단계 간 핸드오프는 `AgentState`(공유 상태)로 한다.
 
 ```
-START -> analysis(6-1 mock) -> tool_selection -> conflict_check
+START -> analysis(pass-through) -> tool_selection -> conflict_check
       -> [reviewables 있으면] request_approval(interrupt) -> execution
       -> feedback_entry(6-3 seam) -> END
       ([reviewables 없으면] conflict_check -> feedback_entry 로 바로)
@@ -26,9 +27,9 @@ START -> analysis(6-1 mock) -> tool_selection -> conflict_check
 
 ## 2. 노드 입출력 계약
 
-### analysis_node (`nodes/analysis.py`) - 6-1, 현재 mock
-- 입력: `state["items"]`(mock 또는 6-1 산출) 또는 `raw_input`
-- 처리: 현재는 items 통과(placeholder). 실제 6-1(LLM) 구현 시 raw_input -> items 생성으로 교체.
+### analysis_node (`nodes/analysis.py`) - 6-1 Item 연결부
+- 입력: `state["items"]`(`/analyze/` 출력 또는 데모 샘플) 또는 `raw_input`
+- 처리: 현재는 items 통과. `raw_input` 직접 분석은 `/run` 단일 호출 확장 시 연결한다.
 - 출력: `{items}`
 
 ### tool_selection_node (`nodes/tool_selection.py`)
@@ -76,12 +77,12 @@ START -> analysis(6-1 mock) -> tool_selection -> conflict_check
 - DEBUG: 노드 내부 / INFO: 분기,단계 전환 / WARNING: 충돌,Pending / ERROR: Tool 실패
 - 레벨은 `ACTION_ROUTER_LOG_LEVEL` 로 조정.
 
-## 5. LLM / 모델 선택 (미정)
+## 5. LLM / 모델 선택
 
+- 6-1 `/analyze/` 는 Solar(`UPSTAGE_API_KEY`)를 우선 사용하고, 키가 없으면 FakeLLM으로 폴백한다.
 - 6-2는 현재 **LLM 미사용**. Tool 선택은 규칙 매핑, 충돌 검사는 규칙 기반.
 - LLM 보조 자리(미구현 `# TODO`): (a) Task 제목 유사도의 애매한 경계 판정, (b) modify 재검증.
-- 6-1 분석(분해/분류/추출, analysis_node 교체)과 6-3 피드백 분석이 LLM 주 사용처.
-- 모델(Solar 유력) 확정 시 LLM SDK 추가.
+- 6-3 피드백 분석도 LLM 주 사용처이며, 그래프 흡수 시 `feedback_entry` 뒤에 연결한다.
 
 ## 6. 외부 연동 (향후)
 
@@ -95,6 +96,6 @@ START -> analysis(6-1 mock) -> tool_selection -> conflict_check
 
 ## 8. Mock 시연 데이터 정책
 
-- `POST /mock/seed`(시연용 기존 데이터)와 `POST /mock/run/{scenario}`(6-1 출력 대체 입력)는
+- `POST /mock/seed`(시연용 기존 데이터)와 `POST /mock/run/{scenario}`(6-1 Item 샘플 입력)는
   **데모 초기화 전용**이다. 운영/일반 사용자 흐름이 아니며, "저장 전 사용자 승인" 대상과 무관한
   시연용 시스템 데이터를 다룬다. seed 는 `/run` 등 일반 경로에서 자동 실행하지 않는다.

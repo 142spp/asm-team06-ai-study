@@ -14,9 +14,9 @@ FastAPI + LangGraph 기반 Action Router Agent 백엔드. backend 단독 uv 프�
 - `app/storage/` - SQLite(`storage.db`). db(스키마+경로훅) / seed(시연용,명시호출) / queries(조회).
 - `app/tools/` - Local Tool 함수 + `TOOL_REGISTRY`.
 - `app/conflict/` - 규칙 기반 중복/충돌 검사(LLM 미사용).
-- `app/agent/` - 단일 LangGraph. state(AgentState) / nodes(analysis(6-1 mock), tool_selection, conflict_check, approval(interrupt), execution, feedback_seam(6-3 연결부)) / graph(MemorySaver+interrupt).
+- `app/agent/` - 단일 LangGraph. state(AgentState) / nodes(analysis(pass-through), tool_selection, conflict_check, approval(interrupt), execution, feedback_seam(6-3 연결부)) / graph(MemorySaver+interrupt).
 - `app/api/routes/` - `analyze`(6-1 분석), `run`(`/run` 시작->interrupt, `/resume` 재개), `confirm`/`feedback`(6-3).
-- `app/mock_data/` - 6-1 출력 흉내 샘플 입력(6-1 미구현 동안 사용).
+- `app/mock_data/` - 6-2 단독/데모용 6-1 Item 샘플 입력.
 - `app/logging_config.py` - `agent.*` 분기/단계 로깅.
 - `tests/` - pytest. conftest(tmp DB 격리) + 단위/엔드포인트 테스트.
 - 6-3(피드백/선호)은 `app/feedback/`, `app/preferences/`, `feedback.db` 에 있고, 그래프상 `feedback_seam` 노드 다음에 흡수 예정.
