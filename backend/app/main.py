@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+load_dotenv()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import analyze, confirm, feedback, run
 from app.logging_config import setup_logging
@@ -19,6 +22,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Action Router Agent", lifespan=lifespan)
 
 # 6-1 분석
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(analyze.router)
 # 6-1~6-2 단일 그래프 (라우팅/검증/승인)
 app.include_router(run.router)
