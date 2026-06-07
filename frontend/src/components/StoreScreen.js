@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import { fetchStorage } from "../api/analyze";
 import { mockStore } from "../mock";
 import { Card, ScreenHead, StepNum, ScreenTitle, ScreenSub, TypeBadge, Pill, EmptyState, Table, MockNote, MockBadge } from "../styles/common";
 import { theme } from "../styles/theme";
@@ -13,8 +14,46 @@ const TABS = [
     { key: "preferences", label: "선호" },
 ];
 
+const STORAGE_KIND = {
+    tasks: "tasks",
+    calendar: "calendar_events",
+    memo: "memos",
+    risk: "risk_logs",
+    pending: "pending_queue",
+};
+
 export default function StoreScreen() {
     const [activeTab, setActiveTab] = useState("tasks");
+    const [rowsByTab, setRowsByTab] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const storageKind = STORAGE_KIND[activeTab];
+    const useMock = !storageKind || error;
+    const rows = useMock ? mockStore[activeTab] : rowsByTab[activeTab] || [];
+
+    useEffect(() => {
+        if (!storageKind || rowsByTab[activeTab]) return;
+
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+        fetchStorage(storageKind)
+            .then((data) => {
+                if (cancelled) return;
+                setRowsByTab((prev) => ({ ...prev, [activeTab]: data.rows || [] }));
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setError("저장소 조회에 실패해 목데이터를 표시합니다.");
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, rowsByTab, storageKind]);
 
     return (
         <div>
@@ -25,14 +64,18 @@ export default function StoreScreen() {
             </ScreenHead>
 
             <Card>
-                <MockBadge style={{ marginBottom: "10px" }} />
+                {useMock && <MockBadge style={{ marginBottom: "10px" }} />}
+                {loading && <MockNote>저장소를 불러오는 중입니다.</MockNote>}
+                {error && <MockNote>{error}</MockNote>}
                 <SubtabBar>
                     {TABS.map((tab) => {
                         const active = activeTab === tab.key;
                         return (
                             <Subtab key={tab.key} $active={active} onClick={() => setActiveTab(tab.key)}>
                                 {tab.label}
-                                <TabCount $active={active}>{mockStore[tab.key]?.length ?? 0}</TabCount>
+                                <TabCount $active={active}>
+                                    {active ? rows?.length ?? 0 : rowsByTab[tab.key]?.length ?? mockStore[tab.key]?.length ?? 0}
+                                </TabCount>
                             </Subtab>
                         );
                     })}
@@ -42,13 +85,13 @@ export default function StoreScreen() {
                     <Table>
                         <thead><tr><th>제목</th><th>담당</th><th>마감</th><th>우선순위</th><th>상태</th></tr></thead>
                         <tbody>
-                            {mockStore.tasks.map((t) => (
+                            {rows.map((t) => (
                                 <tr key={t.id}>
                                     <td>{t.title} {t.note && <Pill>{t.note}</Pill>}</td>
                                     <td>{t.assignee}</td>
-                                    <td>{t.due}</td>
+                                    <td>{t.due_date || t.due || "—"}</td>
                                     <td><Pill $danger={t.priority === "high"}>{t.priority === "high" ? "높음" : "보통"}</Pill></td>
-                                    <td>{t.status}</td>
+                                    <td>{t.status || "저장됨"}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -57,7 +100,7 @@ export default function StoreScreen() {
 
                 {activeTab === "calendar" && (
                     <div>
-                        {mockStore.calendar.map((c) => (
+                        {rows.map((c) => (
                             <CalRow key={c.id} $seed={c.seed}>
                                 <CalWhen>
                                     <b>{c.time ?? "종일"}</b>
@@ -75,21 +118,32 @@ export default function StoreScreen() {
                 )}
 
                 {activeTab === "memo" && (
-                    <EmptyState>
-                        메모 저장소가 비어 있어요. ✎<br />
-                        <span style={{ fontSize: "14px" }}>'기획서 다시 보기'는 할 일로 수정되어 Task Store로 이동했습니다.</span>
-                    </EmptyState>
+                    rows.length === 0 ? (
+                        <EmptyState>
+                            메모 저장소가 비어 있어요. ✎<br />
+                            <span style={{ fontSize: "14px" }}>저장된 메모가 생기면 이 탭에 표시됩니다.</span>
+                        </EmptyState>
+                    ) : (
+                        <Table>
+                            <thead><tr><th>제목</th><th>내용</th></tr></thead>
+                            <tbody>
+                                {rows.map((m) => (
+                                    <tr key={m.id}><td>{m.title}</td><td>{m.content || "—"}</td></tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    )
                 )}
 
                 {activeTab === "risk" && (
                     <Table>
                         <thead><tr><th>리스크</th><th>대응(mitigation)</th><th>출처 문장</th></tr></thead>
                         <tbody>
-                            {mockStore.risk.map((r) => (
+                            {rows.map((r) => (
                                 <tr key={r.id}>
-                                    <td>{r.title}</td>
+                                    <td>{r.title || r.description}</td>
                                     <td>{r.mitigation}</td>
-                                    <SourceCell>"{r.source}"</SourceCell>
+                                    <SourceCell>{r.source ? `"${r.source}"` : "—"}</SourceCell>
                                 </tr>
                             ))}
                         </tbody>
@@ -100,11 +154,11 @@ export default function StoreScreen() {
                     <Table>
                         <thead><tr><th>항목</th><th>사유</th><th>확인 질문</th></tr></thead>
                         <tbody>
-                            {mockStore.pending.map((p) => (
+                            {rows.map((p) => (
                                 <tr key={p.id}>
                                     <td>{p.title}</td>
-                                    <td><PendingBadge>모호 일정</PendingBadge></td>
-                                    <td>{p.question}</td>
+                                    <td><PendingBadge>{p.reason || "보류"}</PendingBadge></td>
+                                    <td>{p.clarification_question || p.question || "—"}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -116,7 +170,7 @@ export default function StoreScreen() {
                         <Table>
                             <thead><tr><th>저장된 선호 규칙</th><th>적용</th><th>근거</th></tr></thead>
                             <tbody>
-                                {mockStore.preferences.map((p) => (
+                                {rows.map((p) => (
                                     <tr key={p.id}>
                                         <td>{p.rule}</td>
                                         <td><Pill $ok={p.active}>{p.active ? "활성" : "비활성"}</Pill></td>
@@ -129,7 +183,9 @@ export default function StoreScreen() {
                     </>
                 )}
 
-                <MockNote style={{ marginTop: "16px" }}>※ 저장소 목데이터 · GET /storage/{'{kind}'} 연동 시 교체</MockNote>
+                <MockNote style={{ marginTop: "16px" }}>
+                    {useMock ? "※ 목데이터 표시 중" : `※ 실제 저장소 GET /storage/${storageKind} 응답`}
+                </MockNote>
             </Card>
         </div>
     );

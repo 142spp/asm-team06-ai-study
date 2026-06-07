@@ -9,17 +9,31 @@ export default function ReviewScreen({ result, onDone }) {
     const [items, setItems] = useState(result.items || []);
     const [approved, setApproved] = useState([]);
     const [excluded, setExcluded] = useState([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
 
     const pending = items.filter((it) => !approved.includes(it) && !excluded.includes(it));
-    const conflictCount = items.filter((it) => it.title === "최종 리허설" || it.title === "API 테스트 정리").length;
+    const conflictCount = items.filter((it) => it.conflict?.has_conflict).length;
     const needsConfirmCount = items.filter((it) => it.needs_confirmation).length;
 
     function handleApprove(item) { setApproved((p) => [...p, item]); }
     function handleExclude(item) { setExcluded((p) => [...p, item]); }
     function handleEdit(original, edited) {
-        setItems((p) => p.map((it) => (it === original ? { ...it, ...edited } : it)));
+        setItems((p) => p.map((it) => (it === original ? { ...it, ...edited, _modified: true } : it)));
     }
     function handleApproveAll() { setApproved([...items]); }
+
+    async function handleDone() {
+        setSubmitting(true);
+        setError(null);
+        try {
+            await onDone(approved, excluded);
+        } catch (e) {
+            setError("승인 실행에 실패했습니다. 백엔드 서버와 세션 상태를 확인하세요.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
 
     return (
         <div>
@@ -69,9 +83,11 @@ export default function ReviewScreen({ result, onDone }) {
 
                 <AgentLog />
 
+                {error && <ErrorBox>{error}</ErrorBox>}
+
                 <BtnRow style={{ marginTop: "20px" }}>
-                    <Btn $primary onClick={() => onDone(approved, excluded)} disabled={approved.length === 0}>
-                        선호 확인 →
+                    <Btn $primary onClick={handleDone} disabled={submitting || approved.length === 0}>
+                        {submitting ? "저장 실행 중…" : "선호 확인 →"}
                     </Btn>
                 </BtnRow>
             </Card>
@@ -121,6 +137,16 @@ const EmptyMsg = styled.div`
     color: ${theme.muted};
     padding: 24px;
     font-size: 15px;
+`;
+
+const ErrorBox = styled.div`
+    margin-top: 12px;
+    background: ${theme.warnbg};
+    border: 2px solid ${theme.warn};
+    border-radius: 10px;
+    padding: 10px 13px;
+    color: ${theme.warn};
+    font-size: 13px;
 `;
 
 const ApprovedPreview = styled.div`
