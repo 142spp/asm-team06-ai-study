@@ -63,8 +63,12 @@ class SolarLLM:
         from langchain_upstage import ChatUpstage  # lazy
 
         self._model = os.getenv("SOLAR_MODEL", "solar-pro")
-        logger.info("SolarLLM init: model=%s", self._model)
-        self._llm = ChatUpstage(model=self._model)
+        effort = os.getenv("SOLAR_REASONING_EFFORT")  # "high"|"low"|None
+        logger.info("SolarLLM init: model=%s reasoning_effort=%s", self._model, effort)
+        kwargs: dict = {"model": self._model}
+        if effort and self._model != "solar-pro":  # reasoning_effort는 pro2/pro3 전용
+            kwargs["reasoning_effort"] = effort
+        self._llm = ChatUpstage(**kwargs)
 
     def analyze(self, *, raw_text: str, base_date: str, context: ContextBundle) -> dict:
         logger.info(

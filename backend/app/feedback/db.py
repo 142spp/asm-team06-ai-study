@@ -1,12 +1,21 @@
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 _DB_PATH = Path(__file__).parent.parent.parent / "feedback.db"
 
 
-def _get_conn() -> sqlite3.Connection:
+@contextmanager
+def _get_conn() -> Iterator[sqlite3.Connection]:
+    """스키마가 보장된 커넥션을 컨텍스트로 돌려준다 (멱등).
+
+    sqlite3.Connection 자체를 `with` 로 쓰면 commit/rollback 만 하고 close 는
+    하지 않아 호출마다 커넥션이 누수된다. 여기서 finally 로 명시 close 한다.
+    쓰기 함수는 블록 안에서 conn.commit() 을 명시 호출해야 한다(여기선 자동 커밋 안 함).
+    """
     conn = sqlite3.connect(_DB_PATH)
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS preference_candidate_log (
@@ -29,7 +38,10 @@ def _get_conn() -> sqlite3.Connection:
         );
     """)
     conn.commit()
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def save_candidate_log(
@@ -54,6 +66,7 @@ def save_candidate_log(
                 json.dumps(candidates, ensure_ascii=False),
             ),
         )
+        conn.commit()
         return cursor.lastrowid
 
 
@@ -70,6 +83,7 @@ def save_user_preference(field: str, original_pattern: Any, preferred: Any) -> N
                 json.dumps(preferred, ensure_ascii=False),
             ),
         )
+        conn.commit()
 
 
 def get_candidate_log(log_id: int) -> dict[str, Any] | None:

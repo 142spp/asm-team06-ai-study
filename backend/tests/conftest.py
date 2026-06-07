@@ -11,6 +11,18 @@ from app.storage.db import configure_db_path, init_db
 from app.storage.seed import seed_if_empty
 
 
+@pytest.fixture(autouse=True)
+def isolate_6_3_db(tmp_path, monkeypatch):
+    """6-3(feedback/preferences) DB 를 tmp 로 격리한다 (모든 테스트 자동 적용).
+
+    storage.db 는 configure_db_path() 훅으로 격리되지만 feedback.db/preferences.db 는
+    모듈 상수 _DB_PATH 라 별도로 막아야 한다. 그래프가 6-3 노드에서 이 DB 에 쓰므로
+    격리 없이는 실제 backend/feedback.db, backend/preferences.db 가 오염된다.
+    """
+    monkeypatch.setattr("app.feedback.db._DB_PATH", tmp_path / "feedback.db")
+    monkeypatch.setattr("app.preferences.store._DB_PATH", tmp_path / "preferences.db")
+
+
 @pytest.fixture
 def tmp_db(tmp_path):
     """테스트별 tmp SQLite DB 경로를 주입한다."""
