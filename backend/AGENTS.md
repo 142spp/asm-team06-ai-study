@@ -34,6 +34,8 @@ uv run --directory backend pytest    # 테스트
 저장소 경로는 `ACTION_ROUTER_DB_PATH` env var 로 바꿀 수 있다(기본 `backend/storage.db`).
 FE 개발 서버 origin은 기본 `http://localhost:3000`, `http://127.0.0.1:3000`을 허용한다.
 Tailscale 등 추가 origin은 `.env`의 `ACTION_ROUTER_CORS_ORIGINS`에 쉼표 구분으로 설정한다.
+원격 기기 브라우저에서 접속할 때는 BE를 `--host 0.0.0.0`으로 열고, CORS origin에
+`http://<tailscale-ip>:3000`을 추가한다.
 HITL은 LangGraph `interrupt()`+MemorySaver(thread_id=session_id)로, `/run`(정지) -> `/resume`(재개)로 표현한다.
 시연용 기존 데이터는 `POST /mock/seed` 로 명시 초기화한다(일반 경로 자동 실행 없음).
 
