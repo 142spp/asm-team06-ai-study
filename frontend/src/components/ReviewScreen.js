@@ -11,6 +11,8 @@ export default function ReviewScreen({ result, onDone }) {
     const [excluded, setExcluded] = useState([]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    // 수정 전 원본 보관 { itemRef -> originalSnapshot }
+    const [originalMap] = useState(() => new Map());
 
     const pending = items.filter((it) => !approved.includes(it) && !excluded.includes(it));
     const conflictCount = items.filter((it) => it.conflict?.has_conflict).length;
@@ -19,15 +21,27 @@ export default function ReviewScreen({ result, onDone }) {
     function handleApprove(item) { setApproved((p) => [...p, item]); }
     function handleExclude(item) { setExcluded((p) => [...p, item]); }
     function handleEdit(original, edited) {
+        // 최초 수정 시에만 원본 스냅샷 저장
+        if (!originalMap.has(original.id)) {
+            originalMap.set(original.id, { ...original });
+        }
         setItems((p) => p.map((it) => (it === original ? { ...it, ...edited, _modified: true } : it)));
     }
     function handleApproveAll() { setApproved([...items]); }
+
+    // 수정된 항목의 원본/수정본 쌍 반환
+    function getModifiedPairs(approvedItems) {
+        return approvedItems
+            .filter((it) => it._modified && originalMap.has(it.id))
+            .map((it) => ({ original: originalMap.get(it.id), modified: it }));
+    }
 
     async function handleDone() {
         setSubmitting(true);
         setError(null);
         try {
-            await onDone(approved, excluded);
+            const modifiedPairs = getModifiedPairs(approved);
+            await onDone(approved, excluded, modifiedPairs);
         } catch (e) {
             setError("승인 실행에 실패했습니다. 백엔드 서버와 세션 상태를 확인하세요.");
         } finally {

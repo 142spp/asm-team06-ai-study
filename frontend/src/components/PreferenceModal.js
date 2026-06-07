@@ -2,13 +2,24 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { mockPreferenceCandidates } from "../mock";
 import { Btn, BtnRow, MockNote, MockBadge } from "../styles/common";
-import { theme, radius, shadow } from "../styles/theme";
+import { theme, radius } from "../styles/theme";
 
-export default function PreferenceModal({ onDone }) {
+// candidates: BE /feedback/analyze 응답 형태 [{ field, original, preferred }]
+// 없으면 목데이터 폴백
+export default function PreferenceModal({ candidates = [], onDone }) {
+    const isReal = candidates.length > 0;
+    const list = isReal ? candidates : mockPreferenceCandidates;
+
     const [actions, setActions] = useState({});
 
     function setAction(field, action) {
         setActions((p) => ({ ...p, [field]: action }));
+    }
+
+    function handleSave() {
+        // '앞으로도 적용' 선택된 후보만 추려서 상위로 전달
+        const saved = list.filter((c) => actions[c.field] === "save");
+        onDone(saved);
     }
 
     return (
@@ -19,32 +30,43 @@ export default function PreferenceModal({ onDone }) {
                     <ModalSub>승인·저장 직후 · 닫으면 결과 요약</ModalSub>
                 </ModalHeader>
                 <ModalBody>
-                    <ModalDesc><MockBadge /> &nbsp;
+                    <ModalDesc>
+                        {!isReal && <><MockBadge />&nbsp;</>}
                         이번 수정에서 <b>반복 가능한 패턴</b>을 선호 후보로 감지했어요.
                         앞으로도 적용할 규칙만 선택하세요.{" "}
                         <Muted>(승인 전엔 장기 저장 안 함)</Muted>
                     </ModalDesc>
 
-                    {mockPreferenceCandidates.map((c) => (
+                    {list.length === 0 && (
+                        <EmptyMsg>수정된 항목이 없어 선호 후보가 없어요.</EmptyMsg>
+                    )}
+
+                    {list.map((c) => (
                         <CandCard key={c.field}>
-                            <CandRule>{c.rule}</CandRule>
-                            <CandBasis>
-                                <span>근거</span>
-                                <span>{c.basis}</span>
-                            </CandBasis>
+                            <CandRule>
+                                {isReal
+                                    ? `"${c.field}" 필드: ${JSON.stringify(c.original)} → ${JSON.stringify(c.preferred)}`
+                                    : c.rule}
+                            </CandRule>
+                            {!isReal && (
+                                <CandBasis>
+                                    <span>근거</span>
+                                    <span>{c.basis}</span>
+                                </CandBasis>
+                            )}
                             <BtnRow style={{ marginTop: "10px" }}>
-                                <Btn $sm $primary={actions[c.field] === "save"}    $ghost={actions[c.field] !== "save"}    onClick={() => setAction(c.field, "save")}>앞으로도 적용</Btn>
+                                <Btn $sm $primary={actions[c.field] === "save"}     $ghost={actions[c.field] !== "save"}     onClick={() => setAction(c.field, "save")}>앞으로도 적용</Btn>
                                 <Btn $sm $primary={actions[c.field] === "one_time"} $ghost={actions[c.field] !== "one_time"} onClick={() => setAction(c.field, "one_time")}>이번만</Btn>
-                                <Btn $sm $warn={actions[c.field] === "dismiss"}   $ghost={actions[c.field] !== "dismiss"}  onClick={() => setAction(c.field, "dismiss")}>무시</Btn>
+                                <Btn $sm $warn={actions[c.field] === "dismiss"}     $ghost={actions[c.field] !== "dismiss"}   onClick={() => setAction(c.field, "dismiss")}>무시</Btn>
                             </BtnRow>
                         </CandCard>
                     ))}
 
                     <ModalFooter>
                         <Muted>'앞으로도 적용'만 User Preference Store에 저장됩니다</Muted>
-                        <Btn $primary onClick={onDone}>선택 저장 후 닫기</Btn>
+                        <Btn $primary onClick={handleSave}>선택 저장 후 닫기</Btn>
                     </ModalFooter>
-                    <MockNote>※ 목데이터 · BE /feedback/analyze 연동 시 실제 후보로 교체</MockNote>
+                    {!isReal && <MockNote>※ 목데이터 폴백 · 항목 수정 시 BE /feedback/analyze 실제 후보 사용</MockNote>}
                 </ModalBody>
             </ModalCard>
         </Overlay>
@@ -139,4 +161,11 @@ const ModalFooter = styled.div`
 const Muted = styled.span`
     font-size: 12px;
     color: ${theme.muted};
+`;
+
+const EmptyMsg = styled.div`
+    text-align: center;
+    color: ${theme.muted};
+    font-size: 14px;
+    padding: 20px 0;
 `;
