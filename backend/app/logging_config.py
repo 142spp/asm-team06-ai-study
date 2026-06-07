@@ -11,6 +11,8 @@
 
 import logging
 import os
+from collections import Counter
+from typing import Any
 
 _CONFIGURED = False
 _DEFAULT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -45,3 +47,40 @@ def setup_logging(level: int | str | None = None) -> logging.Logger:
 def get_logger(name: str) -> logging.Logger:
     """`agent.<name>` 로거를 돌려준다."""
     return logging.getLogger(f"agent.{name}")
+
+
+def env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+def log_payloads_enabled() -> bool:
+    """원문/LLM raw payload 같은 상세 데이터 로깅 여부."""
+    return env_flag("ACTION_ROUTER_LOG_PAYLOADS")
+
+
+def compact_text(value: str | None, limit: int = 160) -> str:
+    """로그 한 줄에 들어가도록 공백/길이를 정리한다."""
+    if not value:
+        return ""
+    text = " ".join(value.split())
+    if len(text) <= limit:
+        return text
+    return f"{text[:limit]}..."
+
+
+def summarize_items(items: list[Any]) -> str:
+    """Item/LLMItem/dict 목록을 type별 카운트 문자열로 요약한다."""
+    counter: Counter[str] = Counter()
+    for item in items:
+        if isinstance(item, dict):
+            item_type = item.get("type")
+        else:
+            item_type = getattr(item, "type", None)
+        counter[str(item_type or "unknown")] += 1
+    if not counter:
+        return "total=0"
+    parts = [f"{key}={value}" for key, value in sorted(counter.items())]
+    return f"total={len(items)} " + " ".join(parts)

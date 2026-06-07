@@ -4,7 +4,7 @@
 type=ignore 는 처리 대상에서 제외(skipped)한다.
 """
 
-from app.logging_config import get_logger
+from app.logging_config import get_logger, summarize_items
 from app.schemas.items import Item, ItemType, ToolName
 from app.schemas.routing import ToolSelection
 
@@ -43,6 +43,7 @@ def select_tool(item: Item) -> ToolSelection | None:
 def tool_selection_node(state: dict) -> dict:
     """state["items"] -> selections / skipped / 정규화된 items."""
     raw_items = state.get("items", [])
+    logger.info("분기: tool_selection 시작 - %s", summarize_items(raw_items))
     items: list[Item] = [
         Item.model_validate(it).ensure_id(idx) for idx, it in enumerate(raw_items)
     ]
@@ -52,8 +53,15 @@ def tool_selection_node(state: dict) -> dict:
     for item in items:
         sel = select_tool(item)
         if sel is None:
+            logger.debug("tool_selection: skipped item=%s type=%s title=%s", item.id, item.type, item.title)
             skipped.append(item.model_dump(mode="json"))
             continue
+        logger.debug(
+            "tool_selection: item=%s type=%s -> tool=%s",
+            item.id,
+            item.type,
+            sel.selected_tool,
+        )
         selections.append(sel.model_dump(mode="json"))
 
     logger.info(

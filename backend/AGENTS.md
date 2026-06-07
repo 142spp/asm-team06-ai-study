@@ -36,6 +36,8 @@ FE 개발 서버 origin은 기본 `http://localhost:3000`, `http://127.0.0.1:300
 Tailscale 등 추가 origin은 `.env`의 `ACTION_ROUTER_CORS_ORIGINS`에 쉼표 구분으로 설정한다.
 원격 기기 브라우저에서 접속할 때는 BE를 `--host 0.0.0.0`으로 열고, CORS origin에
 `http://<tailscale-ip>:3000`을 추가한다.
+시연/디버깅 로그는 `ACTION_ROUTER_LOG_LEVEL=DEBUG`로 상세화한다. 원문/LLM raw 응답까지
+볼 때만 `ACTION_ROUTER_LOG_PAYLOADS=1`을 추가한다(키 값은 로깅하지 않음).
 HITL은 LangGraph `interrupt()`+MemorySaver(thread_id=session_id)로, `/run`(정지) -> `/resume`(재개)로 표현한다.
 시연용 기존 데이터는 `POST /mock/seed` 로 명시 초기화한다(일반 경로 자동 실행 없음).
 

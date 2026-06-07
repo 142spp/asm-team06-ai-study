@@ -76,6 +76,9 @@ START -> analysis(pass-through) -> tool_selection -> conflict_check
 정본: `backend/app/logging_config.py`. `agent.*` 네임스페이스.
 - DEBUG: 노드 내부 / INFO: 분기,단계 전환 / WARNING: 충돌,Pending / ERROR: Tool 실패
 - 레벨은 `ACTION_ROUTER_LOG_LEVEL` 로 조정.
+- 원문/LLM raw 응답은 기본 로깅하지 않는다. 필요할 때만 `ACTION_ROUTER_LOG_PAYLOADS=1`로 켠다.
+- 주요 추적 지점: `/analyze/` 요청, LLM provider 선택, Solar 호출/응답 수신, LLM JSON 검증 재시도,
+  날짜 보정, completeness 산정, `/run` interrupt, `/resume` 실행 결과, `/storage/{kind}` 조회.
 
 ## 5. LLM / 모델 선택
 

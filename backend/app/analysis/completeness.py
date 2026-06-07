@@ -6,8 +6,11 @@ LLM 없이 단위 테스트가 가능하도록 순수 함수로 작성한다.
 """
 
 from app.analysis import config
+from app.logging_config import compact_text, get_logger, summarize_items
 from app.schemas.analysis import LABELS, AnalyzeResult, LLMItem, LLMOutput
 from app.schemas.items import Item, ItemType, ToolName
+
+logger = get_logger("analysis.completeness")
 
 
 def _completeness_score(item: LLMItem) -> float:
@@ -74,7 +77,7 @@ def finalize_item(item: LLMItem) -> Item:
         else _tool_name(item.recommended_tool)
     )
 
-    return Item(
+    finalized = Item(
         type=item_type,
         title=item.title,
         assignee=item.assignee,
@@ -91,10 +94,30 @@ def finalize_item(item: LLMItem) -> Item:
         source_sentence=item.source_sentence,
         clarification_question=question,
     )
+    logger.debug(
+        "Completeness item: raw_type=%s final_type=%s title=%s certainty=%.2f completeness=%.2f confidence=%.2f needs_confirmation=%s reason=%s tool=%s",
+        item.type,
+        finalized.type,
+        compact_text(item.title, limit=80),
+        certainty,
+        completeness,
+        confidence,
+        needs_confirmation,
+        reason,
+        finalized.recommended_tool,
+    )
+    return finalized
 
 
 def finalize(output: LLMOutput) -> AnalyzeResult:
-    return AnalyzeResult(items=[finalize_item(it) for it in output.items])
+    result = AnalyzeResult(items=[finalize_item(it) for it in output.items])
+    pending_count = sum(1 for item in result.items if item.type == ItemType.pending)
+    logger.info(
+        "Completeness complete: %s pending=%d",
+        summarize_items([item.model_dump() for item in result.items]),
+        pending_count,
+    )
+    return result
 
 
 def _tool_name(value: str | None) -> ToolName | None:

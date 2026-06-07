@@ -13,7 +13,10 @@ import json
 import os
 from datetime import date
 
+from app.logging_config import compact_text, get_logger, log_payloads_enabled
 from app.schemas.analysis import ContextBundle
+
+logger = get_logger("llm.solar")
 
 _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하는 분석기다.
 반드시 아래 JSON 스키마만 출력한다(설명/마크다운 금지).
@@ -59,9 +62,21 @@ class SolarLLM:
     def __init__(self) -> None:
         from langchain_upstage import ChatUpstage  # lazy
 
-        self._llm = ChatUpstage(model=os.getenv("SOLAR_MODEL", "solar-pro"))
+        self._model = os.getenv("SOLAR_MODEL", "solar-pro")
+        logger.info("SolarLLM init: model=%s", self._model)
+        self._llm = ChatUpstage(model=self._model)
 
     def analyze(self, *, raw_text: str, base_date: str, context: ContextBundle) -> dict:
+        logger.info(
+            "Solar analyze start: model=%s base_date=%s raw_len=%d prefs=%d guidelines=%d",
+            self._model,
+            base_date,
+            len(raw_text),
+            len(context.preferences),
+            len(context.guidelines),
+        )
+        if log_payloads_enabled():
+            logger.debug("Solar analyze raw_text=%s", compact_text(raw_text, limit=800))
         human = (
             f"기준 날짜(KST): {_format_base_date(base_date)}\n"
             f"User Preference: {json.dumps(context.preferences, ensure_ascii=False)}\n"
@@ -70,6 +85,9 @@ class SolarLLM:
             f"입력:\n{raw_text}"
         )
         resp = self._llm.invoke([("system", _SYSTEM), ("human", human)])
+        logger.info("Solar analyze response received: chars=%d", len(resp.content or ""))
+        if log_payloads_enabled():
+            logger.debug("Solar raw response=%s", compact_text(resp.content, limit=1200))
         return _extract_json(resp.content)
 
 
@@ -91,4 +109,10 @@ def _extract_json(content: str) -> dict:
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1 or start > end:
         raise ValueError("Solar response does not contain a JSON object")
-    return json.loads(text[start : end + 1])
+    parsed = json.loads(text[start : end + 1])
+    logger.debug(
+        "Solar JSON extracted: top_keys=%s item_count=%d",
+        sorted(parsed.keys()),
+        len(parsed.get("items", [])) if isinstance(parsed, dict) else -1,
+    )
+    return parsed

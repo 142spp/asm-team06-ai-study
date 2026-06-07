@@ -9,7 +9,10 @@
 import os
 from typing import Protocol
 
+from app.logging_config import get_logger
 from app.schemas.analysis import ContextBundle
+
+logger = get_logger("llm")
 
 
 class LLMClient(Protocol):
@@ -21,7 +24,17 @@ class LLMClient(Protocol):
 def get_llm() -> LLMClient:
     provider = os.getenv("LLM_PROVIDER", "").lower()
     if provider == "solar" or (not provider and os.getenv("UPSTAGE_API_KEY")):
+        logger.info(
+            "LLM provider selected: solar (explicit=%s key_present=%s)",
+            bool(provider),
+            bool(os.getenv("UPSTAGE_API_KEY")),
+        )
         from app.llm.solar import SolarLLM
         return SolarLLM()
+    logger.info(
+        "LLM provider selected: fake (explicit=%s key_present=%s)",
+        provider or "auto",
+        bool(os.getenv("UPSTAGE_API_KEY")),
+    )
     from app.llm.fake import FakeLLM
     return FakeLLM()
