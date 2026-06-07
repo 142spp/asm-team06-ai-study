@@ -6,6 +6,12 @@ import { theme } from "../styles/theme";
 const TYPE_LABEL  = { task: "할 일", calendar: "일정", memo: "메모", risk: "리스크", pending: "보류" };
 const STORE_LABEL = { task: "Task Store", calendar: "Calendar", memo: "Memo Store", risk: "Risk Log", pending: "Pending" };
 
+function displaySchedule(item) {
+    const date = item.type === "task" ? item.due_date : item.date;
+    if (date && item.time) return `${date} ${item.time}`;
+    return date || item.time || "—";
+}
+
 export default function SummaryScreen({ approved, excluded, onGoStore, onRestart }) {
     const saved   = approved.filter((it) => it.type !== "pending");
     const pending = approved.filter((it) => it.type === "pending");
@@ -36,7 +42,7 @@ export default function SummaryScreen({ approved, excluded, onGoStore, onRestart
                                         <td><TypeBadge type={item.type}>{TYPE_LABEL[item.type]}</TypeBadge></td>
                                         <td>{item.title}</td>
                                         <td>{item.assignee || "—"}</td>
-                                        <td>{item.date || item.time || "—"}</td>
+                                        <td>{displaySchedule(item)}</td>
                                         <td>{STORE_LABEL[item.type]}</td>
                                     </tr>
                                 ))}

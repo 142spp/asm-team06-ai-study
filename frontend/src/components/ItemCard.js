@@ -16,10 +16,25 @@ const WHY_TEXT = {
     pending:  "날짜 모호 또는 confidence 낮음 → 보류.",
 };
 
+function displayDate(item) {
+    if (item.type === "task") return item.due_date;
+    return item.date;
+}
+
 export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
     const [editing, setEditing] = useState(false);
     const [editData, setEditData] = useState({ ...item });
     const conflict = mockConflicts[item.title];
+    const dateValue = displayDate(item);
+    const editDateValue = editData.type === "task" ? editData.due_date : editData.date;
+
+    function handleDateChange(value) {
+        if (editData.type === "task") {
+            setEditData({ ...editData, due_date: value, date: null });
+            return;
+        }
+        setEditData({ ...editData, date: value, due_date: null });
+    }
 
     function handleSaveEdit() {
         onEdit(item, editData);
@@ -39,7 +54,7 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
 
             <ItemMeta>
                 <span>담당 <b>{item.assignee || "—"}</b></span>
-                <span>마감 <b>{item.date || (item.date_status === "vague" ? "모호" : "—")}</b></span>
+                <span>마감 <b>{dateValue || (item.needs_confirmation ? "확인 필요" : "—")}</b></span>
                 {item.time && <span>시간 <b>{item.time}</b></span>}
             </ItemMeta>
 
@@ -100,7 +115,7 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                         </EditField>
                         <EditField>
                             <span>마감일</span>
-                            <input value={editData.date || ""} onChange={(e) => setEditData({ ...editData, date: e.target.value })} />
+                            <input value={editDateValue || ""} onChange={(e) => handleDateChange(e.target.value)} />
                         </EditField>
                         <EditField>
                             <span>시간</span>
