@@ -1,25 +1,11 @@
 // 목데이터 통합 파일
-// 각 항목별 실제 API가 생기면 해당 섹션을 교체한다
+// 실제 API가 연결되면 각 섹션의 교체 조건을 참고해 제거한다.
 
-// ===== 충돌·중복 (BE conflict/rules.py API 노출 시 교체) =====
-export const mockConflicts = {
-    "최종 리허설": {
-        type: "time_conflict",
-        with: "멘토 미팅",
-        existingTime: "06-05 10:00–11:00",
-        suggestion: "11:00로 이동",
-    },
-    "API 테스트 정리": {
-        type: "duplicate",
-        with: "API 테스트 정리 (이동근, 06-04)",
-    },
-};
-
-// ===== Agent 실행 로그 (BE 파이프라인 로그 반환 시 교체) =====
+// ===== Agent 실행 로그 (BE 파이프라인이 로그를 반환하면 교체 — 현재 BE 미지원) =====
 export const mockAgentLog = [
     { label: "맥락 로드",       warn: false },
     { label: "입력 유형 판단",  sub: "회의록", warn: false },
-    { label: "분해",            sub: "8항목", warn: false },
+    { label: "분해",            sub: "8항목",  warn: false },
     { label: "분류",            warn: false },
     { label: "선호·지침 반영",  warn: false },
     { label: "완성도 검사",     warn: false },
@@ -28,7 +14,7 @@ export const mockAgentLog = [
     { label: "승인 대기",       warn: false },
 ];
 
-// ===== 선호 후보 (BE /feedback/analyze 연동 시 교체) =====
+// ===== 선호 후보 폴백 (BE /feedback/analyze 실데이터 우선, 수정 항목 없을 때만 사용) =====
 export const mockPreferenceCandidates = [
     {
         field: "date_vague_to_pending",
@@ -47,7 +33,8 @@ export const mockPreferenceCandidates = [
     },
 ];
 
-// ===== 저장소 (GET /storage/{kind} 연동 시 교체) =====
+// ===== 저장소 (GET /storage/{kind} 실데이터 우선, API 실패 시 폴백) =====
+// preferences 탭은 BE에 대응 엔드포인트 없으므로 항상 이 목데이터 사용
 export const mockStore = {
     tasks: [
         { id: 1, title: "발표자료 만들기",  assignee: "박성종", due: "06-04(목)", priority: "high",   status: "진행 전" },
@@ -66,9 +53,5 @@ export const mockStore = {
     ],
     pending: [
         { id: 1, title: "멘토님께 시연", reason: "모호 일정", question: "멘토 시연의 구체적 날짜/시간이 정해져 있나요?" },
-    ],
-    preferences: [
-        { id: 1, rule: "모호한 날짜는 등록 대신 Pending", active: true, basis: "멘토 시연 보류 유지" },
-        { id: 2, rule: "'다시 보기'류는 할 일로 분류",    active: true, basis: "메모→할일 수정" },
     ],
 };
