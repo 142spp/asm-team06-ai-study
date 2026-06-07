@@ -44,6 +44,44 @@
 | `conflict_check.py` | `{it["id"]: ...}` 가 모든 item 에 id 존재 가정(KeyError latent). tool_selection 이 항상 ensure_id 하므로 현재 안전. | 노드 간 암묵 순서 의존. 직접 호출/테스트 시 주의. |
 | `conflict_check.py` | calendar/task 항목이 없어도 load_calendar_events + load_tasks 무조건 호출(불필요 I/O). | 효율 minor. selections 타입에 따라 지연 로드 가능. |
 
-## 2라운드 - main 의 6-2 파트 (예정)
+## 2라운드 - main 의 6-2 파트 (커밋 8166c03, 2026-06-07)
+
+범위: sjPark 가 개발해 main 에 머지된 6-2 "토대" 코드만. 그 위에 얹힌 그래프/노드/API 레이어는
+1라운드에서 이미 봤으므로 제외. 대상 8파일: `conflict/rules.py`, `schemas/{items,routing,approval}.py`,
+`storage/{db,queries,seed}.py`, `tools/local_tools.py`.
+교차검증: 수동 리뷰 + 독립 code-reviewer 에이전트 + docs/data-model.md 계약 대조 + Context7(Pydantic v2 대조).
+
+### 검증 통과 (문제 없음)
+
+- 충돌 겹침 판정 `new_start < ev_end and ev_start < new_end` 는 표준 인터벌 겹침 공식으로 정확.
+- 마감일 근접(+-1일) 판정: 둘 다 있으면 abs 일수 비교, 한쪽만 있으면 비중복, 둘 다 없으면 근접 간주 - docstring 과 정합.
+- risk 의 `REQUIRED_FIELDS[risk]=("title",)` 는 execution `_build_kwargs` 가 `item.description or item.title`
+  로 NOT NULL 컬럼을 채우므로 정합(IntegrityError 아님).
+- `list_table` f-string 의 table 명은 TABLES 화이트리스트 값(사용자 입력 아님) -> SQL injection 안전.
+- `_parse_hhmm` 는 "25:00"/"10:61" 등 비정상 시간을 strptime ValueError 로 걸러 None 반환.
+- 스키마(items/routing/approval)는 data-model.md 계약과 필드/Enum 일치(드리프트 없음).
+- (Context7/Pydantic v2 대조) `model_config={"use_enum_values": False}` 는 Pydantic 기본값과 동일하나, `_build_kwargs` 의 `item.priority.value` 접근이 깨지지 않도록 동작을 못박는 의미 있는 가드(True 면 .value AttributeError). str-Enum 은 JSON mode 에서 항상 value 로 직렬화되어 `model_dump(mode="json")` 응답이 JSON-safe. `Field(default_factory=list)` 는 mutable default 권장 패턴과 일치.
+
+### 수정 완료
+
+| # | 등급 | 위치 | 내용 | 처리 |
+|---|------|------|------|------|
+| 1 | 버그(repro) | `storage/db.py` `get_conn` | `with get_conn() as conn:` 가 sqlite3.Connection 의 CM 를 쓰는데, 이 CM 은 commit/rollback 만 하고 close 를 안 해 호출마다 커넥션 누수. queries/seed/local_tools 전 호출처에 해당. | `get_conn` 을 `@contextmanager` 로 바꿔 finally 에서 close. `init_db` 의 `get_conn().close()` 는 `with get_conn(): pass` 로 변경. 쓰기 함수의 명시 commit 은 유지. repro 로 블록 종료 후 닫힘 확인. |
+| 2 | 경미(계약 정합) | `conflict/rules.py` `_parse_date` | 입력 타입이 `Any` 인데 datetime 이 date 서브클래스라 isinstance(date) 를 통과 -> date 와 == 비교 어긋남(현재 경로엔 datetime 유입 없어 미재현, 함수 자체 계약 결함). | datetime 을 먼저 `.date()` 로 떨구도록 가드 추가(현재 동작 불변, 순수 하드닝). |
+
+### 주석으로 가정 고정
+
+| 위치 | 가정 | 운영 전환 시 |
+|------|------|--------------|
+| `rules.py` `check_calendar_conflict` | 같은 날짜 안에서만 겹침 판정(자정 넘김 미처리). 23:00+120분이 다음 날로 흘러도 다음 날 일정과 대조 안 함. 데모 60분 일정에선 미발생. | 다중일 인터벌 모델 필요(아래 후순위). |
+
+### 후순위 (건너뜀: 데모 범위 밖 또는 forward-looking)
+
+| 위치 | 내용 | 사유 |
+|------|------|------|
+| `rules.py` 자정 경계 | 자정 넘기는 일정 겹침 미검출(위 주석으로 가정 고정). | "자정 기준 분 + 같은 날짜" 모델의 본질 한계. 다중일 인터벌은 설계 변경. 데모 미발생. |
+| `rules.py` `check_task_duplicate` | 제목은 normalize(lower/공백정리)하지만 assignee 는 원문 비교 -> "박성종" vs "박성종 " 불일치 가능. | 정규화 불일치(경미). 입력이 6-1 정형 출력이라 현재 영향 낮음. |
+| 6-3 모듈 `feedback/db.py`, `preferences/store.py` `_get_conn` | 위 #1 과 동일한 커넥션 누수 패턴(별도 함수). | hyeonZIP 의 6-3 코드라 2라운드(sjPark 6-2) 범위 밖. 3라운드(전체) 또는 소유자 수정 대상. |
+| `routing.py` `ConflictCheckResult.conflicting_with` | `list[dict]` 무타입 passthrough(기존 DB 행). | 1라운드 summary/final_output 무타입 노트와 동류. 현재 값은 전부 JSON 직렬화 가능해 안전. |
 
 ## 3라운드 - 전체 리뷰 (예정)
