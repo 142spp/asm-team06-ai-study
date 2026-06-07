@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { mockConflicts } from "../mock";
-import { Btn, BtnRow, TypeBadge, Pill, NeedsConfirm, WarnBox, QBox, MockBadge } from "../styles/common";
+import { Btn, BtnRow, TypeBadge, Pill, NeedsConfirm, WarnBox, QBox } from "../styles/common";
 import { theme, radius } from "../styles/theme";
 
 const TYPE_LABEL = {
@@ -24,13 +23,13 @@ function displayDate(item) {
 function conflictView(item) {
     if (item.conflict?.has_conflict) {
         return {
-            real: true,
             type: item.conflict.kind === "calendar_overlap" ? "time_conflict" : "duplicate",
             warning: item.conflict.warning,
             alternatives: item.conflict.suggested_alternatives || [],
+            conflictingWith: item.conflict.conflicting_with || [],
         };
     }
-    return mockConflicts[item.title] || null;
+    return null;
 }
 
 export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
@@ -84,16 +83,30 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
 
             {conflict?.type === "time_conflict" && (
                 <WarnBox>
-                    <b>⚠ 일정 충돌</b> · {conflict.warning || `기존 일정 「${conflict.with}」과 시간 겹침`} {!conflict.real && <MockBadge />}
+                    <b>⚠ 일정 충돌</b> · {conflict.warning}
+                    {conflict.conflictingWith?.length > 0 && (
+                        <ConflictDetail>
+                            {conflict.conflictingWith.map((c, i) => (
+                                <span key={i}>「{c.title}」 {c.date} {c.time}</span>
+                            ))}
+                        </ConflictDetail>
+                    )}
                     <br />
-                    <b>대체 경로 →</b> {conflict.real ? conflict.alternatives.join(" · ") : `① ${conflict.suggestion} 제안  ② 수정  ③ Pending 보류`}
+                    <b>대체 경로 →</b> 승인(그대로) &nbsp; 수정 &nbsp; Pending 보류
                 </WarnBox>
             )}
             {conflict?.type === "duplicate" && (
                 <WarnBox>
-                    <b>⚠ Task 중복</b> · {conflict.warning || `기존 「${conflict.with}」과 중복 후보`} {!conflict.real && <MockBadge />}
+                    <b>⚠ Task 중복</b> · {conflict.warning}
+                    {conflict.conflictingWith?.length > 0 && (
+                        <ConflictDetail>
+                            {conflict.conflictingWith.map((c, i) => (
+                                <span key={i}>「{c.title}」 담당: {c.assignee || "—"} 마감: {c.due_date || "—"}</span>
+                            ))}
+                        </ConflictDetail>
+                    )}
                     <br />
-                    <b>대체 경로 →</b> {conflict.real ? conflict.alternatives.join(" · ") : "① 새로 생성  ② 병합 제안  ③ 제외"}
+                    <b>대체 경로 →</b> 승인 &nbsp; 수정 &nbsp; 제외
                 </WarnBox>
             )}
 
@@ -140,7 +153,7 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                         </EditField>
                     </EditGrid>
                     <BtnRow>
-                        <Btn $sm $primary onClick={handleSaveEdit}>저장 후 재검증</Btn>
+                        <Btn $sm $primary onClick={handleSaveEdit}>수정</Btn>
                         <Btn $sm $ghost onClick={() => setEditing(false)}>취소</Btn>
                         <Btn $sm $warn onClick={() => onExclude(item)}>제외</Btn>
                     </BtnRow>
@@ -157,8 +170,8 @@ export default function ItemCard({ item, onApprove, onExclude, onEdit }) {
                         </>
                     ) : conflict?.type === "duplicate" ? (
                         <>
-                            <Btn $sm $ghost onClick={() => onApprove(item)}>새로 생성</Btn>
-                            <Btn $sm $ghost>병합 제안</Btn>
+                            <Btn $sm $primary onClick={() => onApprove(item)}>승인</Btn>
+                            <Btn $sm $ghost onClick={() => setEditing(true)}>수정</Btn>
                             <Btn $sm $warn onClick={() => onExclude(item)}>제외</Btn>
                         </>
                     ) : (
@@ -307,4 +320,17 @@ const EditField = styled.label`
         background: #fff;
         color: ${theme.ink};
     }
+`;
+
+const ConflictDetail = styled.div`
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6a4310;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 8px;
+    border-left: 2px solid ${theme.warn};
+
+    span::before { content: "↳ "; }
 `;

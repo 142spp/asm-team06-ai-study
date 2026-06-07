@@ -6,12 +6,11 @@ import { Card, ScreenHead, StepNum, ScreenTitle, ScreenSub, TypeBadge, Pill, Emp
 import { theme } from "../styles/theme";
 
 const TABS = [
-    { key: "tasks",       label: "할 일" },
-    { key: "calendar",    label: "일정" },
-    { key: "memo",        label: "메모" },
-    { key: "risk",        label: "리스크" },
-    { key: "pending",     label: "보류" },
-    { key: "preferences", label: "선호" },
+    { key: "tasks",    label: "할 일" },
+    { key: "calendar", label: "일정" },
+    { key: "memo",     label: "메모" },
+    { key: "risk",     label: "리스크" },
+    { key: "pending",  label: "보류" },
 ];
 
 const STORAGE_KIND = {
@@ -165,23 +164,6 @@ export default function StoreScreen() {
                     </Table>
                 )}
 
-                {activeTab === "preferences" && (
-                    <>
-                        <Table>
-                            <thead><tr><th>저장된 선호 규칙</th><th>적용</th><th>근거</th></tr></thead>
-                            <tbody>
-                                {rows.map((p) => (
-                                    <tr key={p.id}>
-                                        <td>{p.rule}</td>
-                                        <td><Pill $ok={p.active}>{p.active ? "활성" : "비활성"}</Pill></td>
-                                        <td style={{ color: theme.muted }}>{p.basis}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
-                        <MockNote>※ Guideline Store가 User Preference보다 우선 적용됨</MockNote>
-                    </>
-                )}
 
                 <MockNote style={{ marginTop: "16px" }}>
                     {useMock ? "※ 목데이터 표시 중" : `※ 실제 저장소 GET /storage/${storageKind} 응답`}

@@ -8,7 +8,7 @@ import ReviewScreen from "./components/ReviewScreen";
 import PreferenceModal from "./components/PreferenceModal";
 import SummaryScreen from "./components/SummaryScreen";
 import StoreScreen from "./components/StoreScreen";
-import { resumeRun } from "./api/analyze";
+import { resumeRun, analyzeFeedback, confirmFeedback } from "./api/analyze";
 
 const STEPS = [
     { id: "input",      label: "입력",      num: 1 },
@@ -107,6 +107,8 @@ export default function App() {
     const [approved, setApproved] = useState([]);
     const [excluded, setExcluded] = useState([]);
     const [executionResult, setExecutionResult] = useState(null);
+    const [preferenceCandidates, setPreferenceCandidates] = useState([]);
+    const [feedbackLogId, setFeedbackLogId] = useState(null);
 
     function handleAnalyzeDone(result, text) {
         setAnalyzeResult(result);
@@ -119,29 +121,66 @@ export default function App() {
         return cleaned;
     }
 
-    async function handleReviewDone(approvedItems, excludedItems) {
+    async function handleReviewDone(approvedItems, excludedItems, modifiedPairs) {
         setApproved(approvedItems);
         setExcluded(excludedItems);
         setExecutionResult(null);
-        if (analyzeResult?.session_id) {
+        setPreferenceCandidates([]);
+        setFeedbackLogId(null);
+
+        const sessionId = analyzeResult?.session_id;
+
+        if (sessionId) {
+            // 1. /resume — 승인 결정으로 그래프 재개 및 저장
             const decisions = [
-                ...approvedItems.map((item) => ({
-                    item_id: item.id,
-                    action: "approve",
+                ...approvedItems.map((item, idx) => ({
+                    item_id: item.id || `item-${idx}`,
+                    action: item._modified ? "modify" : "approve",
                     modified_item: item._modified ? cleanItem(item) : undefined,
                 })),
-                ...excludedItems.map((item) => ({
-                    item_id: item.id,
+                ...excludedItems.map((item, idx) => ({
+                    item_id: item.id || `item-${idx}`,
                     action: "exclude",
                 })),
             ];
-            const result = await resumeRun(analyzeResult.session_id, decisions);
+            const result = await resumeRun(sessionId, decisions);
             setExecutionResult(result);
+
+            // 2. /feedback/analyze — 수정 쌍에서 선호 후보 도출
+            if (modifiedPairs?.length > 0) {
+                try {
+                    const allCandidates = [];
+                    let lastLogId = null;
+                    for (const { original, modified } of modifiedPairs) {
+                        const fb = await analyzeFeedback(sessionId, original, modified);
+                        allCandidates.push(...(fb.candidates || []));
+                        lastLogId = fb.log_id;
+                    }
+                    setPreferenceCandidates(allCandidates);
+                    setFeedbackLogId(lastLogId);
+                } catch (e) {
+                    // 피드백 분석 실패는 조용히 무시 (선호 모달은 목데이터로 폴백)
+                }
+            }
         }
+
         setStep("preference");
     }
 
-    function handlePreferenceDone() {
+    async function handlePreferenceDone(savedCandidates) {
+        // 저장할 후보가 있으면 /feedback/confirm 호출
+        if (feedbackLogId && savedCandidates?.length > 0) {
+            try {
+                await confirmFeedback(
+                    analyzeResult?.session_id,
+                    feedbackLogId,
+                    "save",
+                    savedCandidates,
+                );
+            } catch (e) {
+                // 선호 저장 실패는 조용히 무시
+            }
+        }
         setStep("summary");
     }
 
@@ -152,6 +191,8 @@ export default function App() {
         setApproved([]);
         setExcluded([]);
         setExecutionResult(null);
+        setPreferenceCandidates([]);
+        setFeedbackLogId(null);
     }
 
     return (
@@ -197,8 +238,7 @@ export default function App() {
                     )}
                     {step === "preference" && (
                         <PreferenceModal
-                            approved={approved}
-                            excluded={excluded}
+                            candidates={preferenceCandidates}
                             onDone={handlePreferenceDone}
                         />
                     )}
