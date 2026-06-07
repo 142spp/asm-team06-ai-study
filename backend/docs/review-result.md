@@ -85,3 +85,29 @@
 | `routing.py` `ConflictCheckResult.conflicting_with` | `list[dict]` 무타입 passthrough(기존 DB 행). | 1라운드 summary/final_output 무타입 노트와 동류. 현재 값은 전부 JSON 직렬화 가능해 안전. |
 
 ## 3라운드 - 전체 리뷰 (예정)
+
+## 단일 그래프 전환 리뷰 (`feat/single-graph-6-3`)
+
+6-3 피드백/선호를 별도 `/feedback/*` 라우터에서 단일 LangGraph 2단계 HITL 로 흡수한 변경
+(BE 그래프 노드/스키마/run.py + FE resume 전환/상태 스킵/no-mock). code-reviewer 에이전트로 검토.
+
+### 정합성 확인 (이상 없음)
+- HITL 멱등성: `save_candidate_log` 는 interrupt 없는 `feedback_analyze` 노드, `save_user_preference` 는
+  interrupt 없는 `preference_store` 노드에 위치 -> resume 재실행에도 중복 INSERT 없음.
+- 2-interrupt 분기: `_to_response` 의 `payload.reason`(awaiting_approval/awaiting_preference)이 각 노드의
+  interrupt 인자와 일치. `/resume` 의 preference_choices vs decisions 분기 정상.
+- conditional edge `_route_after_feedback` 의 `state.get("candidates")` 키가 노드 반환과 일치.
+- BE<->FE 스키마 정합: PreferenceCandidate(field/original/preferred/pattern_type/log_id),
+  PreferenceChoice(field/action/original/preferred/log_id) 와 FE 송수신 필드 일치.
+
+### 수정 완료
+
+| # | 등급 | 위치 | 내용 | 처리 |
+|---|------|------|------|------|
+| 1 | Important | `agent/nodes/feedback_seam.py` `feedback_entry_node` | `reviewables.get(item_id)` 가 None 이면 `detect_diff({}, modified)` 가 modified 의 모든 필드를 변경으로 잡아 과잉 선호 후보 생성(FE 폴백 id 불일치 등 엣지). | original 이 None 이면 해당 수정 건 생략 + WARNING 로그. |
+| 2 | Important | `api/routes/run.py` `resume` | `preference_choices` 도 None 이고 `decisions` 도 비면 빈 결정으로 그래프가 조용히 완료되어 사용자 입력 무시(API 계약 취약). | 둘 다 비면 400 반환. |
+
+### 후순위 (건너뜀)
+- `handleReviewDone(approved, excluded)` 가 ReviewScreen 의 `onDone(.., modifiedPairs)` 3번째 인자를 무시 -
+  decisions 는 `item._modified` 로 직접 구성하므로 기능 영향 없음(dead parameter).
+- 기존 `/feedback/*` 라우터 보조 유지 - 현재 FE 미사용이라 모순 없음(하위호환 목적).

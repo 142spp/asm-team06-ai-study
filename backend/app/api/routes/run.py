@@ -120,6 +120,12 @@ def resume(req: ResumeRequest) -> RunResponse:
     동작이 보장되지 않는다(데모는 happy path 전제). 운영 시 대기 세션 존재 검증
     (graph.get_state) 후 없으면 4xx 반환을 추가한다.
     """
+    # 둘 다 비면 빈 결정으로 그래프가 조용히 완료되어 사용자 입력이 무시된다.
+    if req.preference_choices is None and not req.decisions:
+        raise HTTPException(
+            status_code=400,
+            detail="decisions 또는 preference_choices 중 하나는 필요합니다.",
+        )
     if req.preference_choices is not None:
         resume_value = [c.model_dump(mode="json") for c in req.preference_choices]
         logger.info(
