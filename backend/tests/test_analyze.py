@@ -300,6 +300,19 @@ def test_postprocess_applies_enum_preference_with_type_coercion():
     assert out.items[0].priority == Priority.high
 
 
+def test_postprocess_skips_invalid_preference_without_crashing():
+    # preferred 값이 필드 타입에 invalid(date 필드에 비날짜)면 보정을 건너뛰고 원본 유지.
+    # ValidationError 가 analyze 전체를 실패시키지 않아야 한다(best-effort).
+    item = Item(id="item-0", type=ItemType.task, title="발표자료", due_date=date(2026, 6, 6))
+    ctx = ContextBundle(
+        preferences=[
+            {"field": "due_date", "original_pattern": "2026-06-06", "preferred": "내일까지"}
+        ]
+    )
+    out = _postprocess(AnalyzeResult(items=[item]), ctx)
+    assert out.items[0].due_date == date(2026, 6, 6)  # 원본 유지(크래시 없음)
+
+
 if __name__ == "__main__":
     import inspect
 

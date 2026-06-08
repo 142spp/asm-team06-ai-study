@@ -137,3 +137,41 @@ BE 그래프/HITL, BE 분석/LLM/충돌, BE 저장소/피드백/API, FE 전체�
 - `/run` 동일 session_id 재호출 시 candidate_log 중복 INSERT(append 로그라 무해), `_to_response` unknown reason 폴백, `/resume` reload 후 세션 부재 시 500(코드 주석에 알려진 한계) -> 운영 전환 시 `graph.get_state` 가드. 데모 범위 밖.
 - StoreScreen `r.source`(BE 컬럼 없음->항상 "—"), `useEffect` deps 의 rowsByTab -> PR #20(FE) 영역, 기능 영향 낮음.
 - `mock/index.js` 의 mockAgentLog/mockPreferenceCandidates 는 미사용 dead export -> 정리 권장.
+
+## 후반부 작업 리뷰 (`feat/late-stage`, 7-finder 교차검증 high)
+
+선호 재주입(D3) + 외부연동(Calendar/Tasks) + 기존항목요약 + Guideline JSON + _postprocess.
+대상: `pipeline.py`, `tools/external.py`, `tools/local_tools.py`, `llm/solar.py`. 7개 finder(상관 3 +
+정리 3 + altitude 1) -> 1-vote 검증. 외부 API 사실은 웹검증.
+
+### 검증 통과 = 코드 정확 (오탐, 안심 포인트)
+
+- **Calendar `dateTime`+`timeZone`**: `timeZone="Asia/Seoul"` 을 명시하면 offset 없는
+  `dateTime`("2026-06-12T10:00:00")이 유효하고 Seoul 시각으로 정확히 해석됨(Google 공식 문서). 정확.
+- **Tasks `due`**: API 가 time 부분을 폐기하고 날짜만 사용 -> `00:00:00.000Z` 보내도 off-by-one 없음. 정확.
+- pk 캡처(local_tools, `with` 블록 안에서 lastrowid 확보 후 외부훅), 순환 import(external 은 tools 역참조
+  없음), `_end_dt` minutes None(`or 60` 가드), storage 미초기화(get_conn 이 CREATE IF NOT EXISTS): 모두 무해.
+
+### 실제 버그
+
+| # | 위치 | 내용 | 확신도 | 처리 |
+|---|------|------|--------|------|
+| 1 | `analysis/pipeline.py` `_postprocess` | `Item.model_validate(dump)` 가 invalid `preferred` 값(예: date 필드에 비날짜 선호)에서 ValidationError 를 던지면, try/except 부재로 `analyze()` 전체가 실패 -> 정상 LLM 결과가 분석 실패로 전환. 선호 보정은 best-effort 여야 함. | 85 | 수정 완료: model_validate 를 try/except(ValidationError) 로 감싸 실패 시 원본 항목 유지 + WARNING. 회귀 테스트 추가. |
+
+### 개선 권장 (낮은 심각도)
+
+| 위치 | 내용 | 비고 |
+|------|------|------|
+| `tools/external.py` `_access_token` | 모듈 전역 `_token_cache` 를 lock 없이 갱신 -> 동시 요청 시 중복 token refresh. raise_for_status 가 캐시 전이라 오염은 없고 중복 호출만. | 데모 단일 사용자 영향 낮음. `threading.Lock` 권장. |
+
+### 후순위 / 정리 (조치 보류, 기록만)
+
+- **테스트 격리**: `load_context` 가 storage.db 를 읽게 되면서, `tmp_db` 없이 `analyze()` 를 부르는
+  test_analyze 케이스가 실제 `backend/storage.db` 를 건드림(get_conn auto-create). feedback.db 는 autouse
+  fixture 로 격리되나 storage.db 는 미격리. 기능 영향 없음(84 통과)이나 conftest 에 storage autouse 격리 추가 권장.
+- **중복**: `_to_text`(local_tools) vs `_date_str`(external) 날짜->문자열 변환 중복(clip 차이만). 공용화 가능.
+- **중복**: `try_push_calendar_event`/`try_push_task` 의 enabled 체크 + try/except + WARNING 구조 동일 -> 공통 래퍼 추출 가능.
+- **altitude**: 외부 푸시 훅을 `local_tools` 내부에 둔 seam 위치는 execution_node/스키마 불변을 위한 의도적 선택.
+  추후 다른 저장 백엔드/전역 모킹이 필요하면 registry/decorator 레벨 seam 으로 승격 고려.
+- **efficiency(경미)**: `_summarize_existing` 이 매 analyze 마다 2 쿼리, `_postprocess` 가 매 item `model_dump` -
+  데모 규모에선 무시 가능.

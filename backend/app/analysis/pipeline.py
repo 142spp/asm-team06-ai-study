@@ -8,6 +8,8 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.analysis.completeness import finalize
 from app.feedback.db import load_user_preferences
 from app.llm.base import LLMClient, get_llm
@@ -150,8 +152,19 @@ def _postprocess(result: AnalyzeResult, context: ContextBundle) -> AnalyzeResult
                 dump[field] = pref.get("preferred")
                 applied = True
         if applied:
-            changed += 1
-            items.append(Item.model_validate(dump))  # 재검증으로 타입(date/enum) 강제
+            # 재검증으로 타입(date/enum) 강제. 선호 보정은 best-effort 라, preferred 값이
+            # 해당 필드에 invalid 하면(예: date 필드에 비날짜) 원본 항목을 유지하고 분석을
+            # 계속한다(보정 실패가 정상 LLM 결과를 분석 실패로 뒤집지 않게).
+            try:
+                items.append(Item.model_validate(dump))
+                changed += 1
+            except ValidationError as exc:
+                logger.warning(
+                    "Postprocess skip (invalid preference value): item=%s: %s",
+                    item.title,
+                    compact_text(str(exc), limit=200),
+                )
+                items.append(item)
         else:
             items.append(item)
 
