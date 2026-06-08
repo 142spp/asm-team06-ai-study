@@ -172,6 +172,17 @@ def _post(url: str, body: dict) -> dict:
     return resp.json()
 
 
+def _get(url: str, params: dict | None = None) -> dict:
+    resp = httpx.get(
+        url,
+        headers={"Authorization": f"Bearer {_access_token()}"},
+        params=params or {},
+        timeout=_HTTP_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def try_push_calendar_event(
     *,
     title: str,
@@ -226,3 +237,106 @@ def try_push_task(
             "외부 연동 실패(Tasks), 로컬만 저장: %s: %s", exc.__class__.__name__, exc
         )
         return None
+
+
+# --- 읽기(양방향): 충돌 검사용 기존 일정/할일 조회 -------------------------
+# conflict_check 가 로컬 storage 와 합쳐 검사하도록, 구글 데이터를 로컬 dict 형식
+# (calendar: all_day/date/time/duration_estimate/title, task: title/assignee/due_date)
+# 으로 변환해 돌려준다. 외부 off/실패 시 빈 list -> 로컬만으로 검사 계속(폴백).
+
+def _duration_min(start_dt: str | None, end_dt: str | None) -> int | None:
+    if not start_dt or not end_dt:
+        return None
+    try:
+        delta = datetime.fromisoformat(end_dt) - datetime.fromisoformat(start_dt)
+        minutes = int(delta.total_seconds() // 60)
+        return minutes if minutes > 0 else None
+    except ValueError:
+        return None
+
+
+def calendar_event_to_local(e: dict) -> dict:
+    """Google Calendar event -> 로컬 calendar_events dict.
+
+    timed 이벤트는 `dateTime`(offset 포함)에서 날짜/시각을 떼고, all_day 는 `start.date`.
+    시각은 offset 그대로의 로컬 표기를 쓴다(우리 데이터는 KST). 외부에서 만든 다른 offset
+    이벤트의 정확한 환산은 데모 범위 밖(주석으로 고정).
+    """
+    start, end = e.get("start", {}), e.get("end", {})
+    if start.get("dateTime"):
+        dt = start["dateTime"]
+        return {
+            "id": e.get("id"),
+            "title": e.get("summary", ""),
+            "date": dt[:10],
+            "time": dt[11:16],
+            "all_day": False,
+            "duration_estimate": _duration_min(start.get("dateTime"), end.get("dateTime")),
+        }
+    return {
+        "id": e.get("id"),
+        "title": e.get("summary", ""),
+        "date": start.get("date"),
+        "time": None,
+        "all_day": True,
+        "duration_estimate": None,
+    }
+
+
+def task_to_local(t: dict) -> dict:
+    """Google Task -> 로컬 tasks dict. Tasks 는 담당자/우선순위 개념이 없어 None."""
+    due = t.get("due")
+    return {
+        "id": t.get("id"),
+        "title": t.get("title", ""),
+        "assignee": None,
+        "due_date": due[:10] if due else None,
+        "priority": None,
+    }
+
+
+def fetch_calendar_events(max_results: int = 250) -> list[dict]:
+    """구글 캘린더 기존 일정을 로컬 형식으로 가져온다(충돌 검사용).
+
+    외부 off 또는 실패 시 빈 list 를 돌려 로컬만으로 검사를 계속한다(read 폴백).
+    """
+    if not external_enabled():
+        return []
+    calendar_id = os.getenv("GOOGLE_CALENDAR_ID", "primary")
+    try:
+        data = _get(
+            _CALENDAR_URL.format(calendar_id=calendar_id),
+            params={"singleEvents": "true", "orderBy": "startTime", "maxResults": max_results},
+        )
+        events = [calendar_event_to_local(e) for e in data.get("items", [])]
+        logger.info("외부 연동: Google Calendar 기존 일정 %d건 조회", len(events))
+        return events
+    except Exception as exc:  # noqa: BLE001 - read 실패는 로컬 검사를 막지 않는다
+        logger.warning(
+            "외부 연동 실패(Calendar 조회), 로컬만으로 충돌 검사: %s: %s",
+            exc.__class__.__name__,
+            exc,
+        )
+        return []
+
+
+def fetch_tasks(max_results: int = 100) -> list[dict]:
+    """구글 Tasks 기존 할일을 로컬 형식으로 가져온다(중복 검사용). 규칙은 위와 동일."""
+    if not external_enabled():
+        return []
+    tasklist_id = os.getenv("GOOGLE_TASKLIST_ID", "@default")
+    try:
+        data = _get(
+            _TASKS_URL.format(tasklist_id=tasklist_id),
+            params={"maxResults": max_results, "showCompleted": "false"},
+        )
+        tasks = [task_to_local(t) for t in data.get("items", [])]
+        logger.info("외부 연동: Google Tasks 기존 할일 %d건 조회", len(tasks))
+        return tasks
+    except Exception as exc:  # noqa: BLE001 - read 실패는 로컬 검사를 막지 않는다
+        logger.warning(
+            "외부 연동 실패(Tasks 조회), 로컬만으로 중복 검사: %s: %s",
+            exc.__class__.__name__,
+            exc,
+        )
+        return []

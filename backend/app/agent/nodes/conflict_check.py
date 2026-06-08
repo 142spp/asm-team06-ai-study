@@ -2,6 +2,7 @@
 
 선택된 항목을 기존 저장소(calendar_events / tasks)와 대조한다.
 calendar / task 만 검사하고 memo / risk / pending 은 통과한다.
+외부 연동이 켜져 있으면 구글 캘린더/Tasks 의 기존 항목도 합쳐서 대조한다(양방향).
 결과를 ReviewableItem(item+selection+conflict) 으로 묶어 /route 응답을 구성한다.
 """
 
@@ -10,6 +11,7 @@ from app.logging_config import get_logger
 from app.schemas.items import Item
 from app.schemas.routing import ConflictCheckResult, ReviewableItem, ToolSelection
 from app.storage.queries import load_calendar_events, load_tasks
+from app.tools.external import fetch_calendar_events, fetch_tasks
 
 logger = get_logger("node.conflict_check")
 
@@ -19,13 +21,24 @@ def conflict_check_node(state: dict) -> dict:
     items = {it["id"]: Item.model_validate(it) for it in state.get("items", [])}
     selections = [ToolSelection.model_validate(s) for s in state.get("selections", [])]
 
-    calendar_events = load_calendar_events()
-    tasks = load_tasks()
+    # 로컬 저장소 + (외부 켜져 있으면) 구글 캘린더/Tasks 를 합쳐 대조한다.
+    # 외부 조회 실패는 빈 list 로 폴백되므로 로컬만으로 검사가 계속된다.
+    local_calendar = load_calendar_events()
+    local_tasks = load_tasks()
+    ext_calendar = fetch_calendar_events()
+    ext_tasks = fetch_tasks()
+    calendar_events = local_calendar + ext_calendar
+    tasks = local_tasks + ext_tasks
     logger.info(
-        "분기: conflict_check 시작 - selections=%d stored_calendar=%d stored_tasks=%d",
+        "분기: conflict_check 시작 - selections=%d calendar=%d(local %d+google %d) "
+        "tasks=%d(local %d+google %d)",
         len(selections),
         len(calendar_events),
+        len(local_calendar),
+        len(ext_calendar),
         len(tasks),
+        len(local_tasks),
+        len(ext_tasks),
     )
 
     conflicts: list[dict] = []

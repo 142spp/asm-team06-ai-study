@@ -128,3 +128,78 @@ def test_local_tool_still_works_when_external_disabled(tmp_db):
 
     pk = create_calendar_event("로컬 일정", date(2026, 6, 12), "10:00")
     assert isinstance(pk, int) and pk >= 1
+
+
+# --- 읽기(양방향): 변환 + 조회 + 폴백 --------------------------------------
+
+def test_calendar_event_to_local_timed():
+    e = {
+        "id": "evt1",
+        "summary": "팀 회의",
+        "start": {"dateTime": "2026-06-12T10:00:00+09:00", "timeZone": "Asia/Seoul"},
+        "end": {"dateTime": "2026-06-12T11:00:00+09:00", "timeZone": "Asia/Seoul"},
+    }
+    local = external.calendar_event_to_local(e)
+    assert local["title"] == "팀 회의"
+    assert local["date"] == "2026-06-12"
+    assert local["time"] == "10:00"
+    assert local["all_day"] is False
+    assert local["duration_estimate"] == 60
+
+
+def test_calendar_event_to_local_all_day():
+    e = {"id": "evt2", "summary": "워크샵", "start": {"date": "2026-06-12"}, "end": {"date": "2026-06-13"}}
+    local = external.calendar_event_to_local(e)
+    assert local["all_day"] is True
+    assert local["date"] == "2026-06-12"
+    assert local["time"] is None
+
+
+def test_task_to_local():
+    t = {"id": "t1", "title": "API 정리", "due": "2026-06-08T00:00:00.000Z"}
+    local = external.task_to_local(t)
+    assert local["title"] == "API 정리"
+    assert local["due_date"] == "2026-06-08"
+    assert local["assignee"] is None
+
+
+def test_fetch_calendar_events_noop_when_disabled():
+    assert external.fetch_calendar_events() == []
+
+
+def test_fetch_tasks_noop_when_disabled():
+    assert external.fetch_tasks() == []
+
+
+def test_fetch_calendar_events_maps_google_response(monkeypatch):
+    monkeypatch.setenv("TOOL_EXTERNAL", "google")
+    monkeypatch.setattr(
+        external,
+        "_get",
+        lambda url, params=None: {
+            "items": [
+                {
+                    "id": "evt1",
+                    "summary": "기존 회의",
+                    "start": {"dateTime": "2026-06-12T14:00:00+09:00"},
+                    "end": {"dateTime": "2026-06-12T15:00:00+09:00"},
+                }
+            ]
+        },
+    )
+    events = external.fetch_calendar_events()
+    assert len(events) == 1
+    assert events[0]["title"] == "기존 회의"
+    assert events[0]["time"] == "14:00"
+
+
+def test_fetch_falls_back_to_empty_on_error(monkeypatch):
+    # 구글 조회 실패 시 빈 list -> 로컬만으로 충돌 검사 계속.
+    monkeypatch.setenv("TOOL_EXTERNAL", "google")
+
+    def boom(url, params=None):
+        raise RuntimeError("calendar api down")
+
+    monkeypatch.setattr(external, "_get", boom)
+    assert external.fetch_calendar_events() == []
+    assert external.fetch_tasks() == []

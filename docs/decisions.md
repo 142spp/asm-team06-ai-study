@@ -47,6 +47,19 @@
 - **범위 메모**: planning/AGENTS 의 "외부 실시간 연동 제외"를 데모 한정으로 완화. 단일 계정 푸시까지만,
   멀티유저 OAuth/양방향 동기화는 여전히 범위 밖.
 
+## 2026-06-08 - 외부 연동 양방향(읽기) + 테스트 격리
+
+- **conflict_check 가 구글도 읽는다**: 로컬 storage + `fetch_calendar_events`/`fetch_tasks`(구글)를
+  합쳐 충돌/중복을 검사. 구글 데이터는 로컬 dict 형식으로 변환(`calendar_event_to_local`/`task_to_local`).
+  이전 단방향(쓰기만)에서 "출력은 미러, 입력은 로컬 폐쇄계"였던 비대칭을 해소.
+- **read 폴백**: 외부 off/조회 실패 시 빈 list -> 로컬만으로 검사 계속(구글 장애가 분석을 멈추지 않음).
+  쓰기(push) 폴백과 같은 best-effort 원칙.
+- **테스트 격리(중요)**: `.env` 에 토큰을 넣으면 `main.py` load_dotenv 로 그 값이 테스트에도 로드되어
+  conflict_check(읽기)/execution(쓰기)이 실제 구글 API 를 호출(네트워크 의존 + 실제 캘린더 변경)했다.
+  `conftest.py` autouse fixture 로 모든 테스트에서 `TOOL_EXTERNAL=off` 강제(외부 자체 테스트만 자체 제어).
+- **한계**: 구글 timed 이벤트 시각은 offset 의 로컬 표기를 그대로 사용(KST 가정). 다른 timezone 의
+  외부 이벤트 정확 환산, events.list 시간범위 최적화는 데모 범위 밖.
+
 ## 2026-06-08 - 저장된 선호 재주입(D3) 연결
 
 - **`load_context()` 가 6-3 `feedback.db` 의 `load_user_preferences()` 를 호출**해 저장된

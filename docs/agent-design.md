@@ -118,6 +118,13 @@ START -> analysis(pass-through) -> tool_selection -> conflict_check
   죽지 않게). `execution_node`/응답 스키마/계약 변경 없음.
 - **매핑**: `create_calendar_event` -> Google Calendar, `create_task` -> Google Tasks.
   memo/risk 는 외부 대상이 없어 로컬만.
+- **양방향(읽기)**: `conflict_check` 가 로컬 storage 와 함께 구글 캘린더/Tasks 의 기존 항목도
+  조회(`fetch_calendar_events`/`fetch_tasks`)해 합쳐서 충돌/중복을 검사한다. 구글 데이터는
+  로컬 dict 형식으로 변환(`calendar_event_to_local`/`task_to_local`). **read 폴백**: 외부 off/조회
+  실패 시 빈 list 를 돌려 로컬만으로 검사를 계속한다(구글 장애가 분석을 멈추지 않음).
+  한계: 구글 timed 이벤트의 시각은 offset 그대로의 로컬 표기를 쓴다(우리 데이터는 KST 기준).
+- **테스트 격리**: `.env` 토큰이 로드되면 conflict_check(읽기)/execution(쓰기)이 실제 구글을
+  호출하므로, `conftest.py` 가 모든 테스트에서 `TOOL_EXTERNAL=off` 로 강제한다(외부 자체 테스트만 예외).
 
 ## 7. Checkpointer / 세션
 
