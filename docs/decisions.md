@@ -35,6 +35,18 @@
 - **seed는 데모 전용**: `POST /mock/seed` / 테스트 fixture에서만 실행. 일반 요청 경로
   자동 실행 금지("저장 전 사용자 승인" 제약과 구분되는 시연용 시스템 데이터).
 
+## 2026-06-08 - 외부 연동(Google Calendar/Tasks) Tool 내장
+
+- **백엔드 소스코드에 직접 내장**(에이전트/MCP 대행 PoC 아님). `tools/external.py` 푸시 훅을
+  `local_tools.create_calendar_event`/`create_task` 에 얹어, 로컬 SQLite 저장 + 외부 생성을 함께.
+- **seam = 키 자동감지**(LLM seam 과 동일): 키 없으면 no-op(로컬만) -> 기존 데모/테스트 무변경.
+  `.env` 에 OAuth 자격(서버 단일 계정 refresh token) 주입 시 자동 활성. `TOOL_EXTERNAL` 로 강제.
+- **의존성 0 추가**: `fastapi[standard]` 의 `httpx` 로 raw REST. google SDK 미사용(무게/휠 회피).
+- **FE 무변경**: 서버 단일 계정 방식이라 사용자별 OAuth 로그인 없음. `execution_node`/스키마/계약 불변.
+- **실패 정책**: 외부 실패는 WARNING 으로 삼키고 로컬 저장 유지(데모가 외부 오류로 죽지 않게).
+- **범위 메모**: planning/AGENTS 의 "외부 실시간 연동 제외"를 데모 한정으로 완화. 단일 계정 푸시까지만,
+  멀티유저 OAuth/양방향 동기화는 여전히 범위 밖.
+
 ## 2026-06-08 - 저장된 선호 재주입(D3) 연결
 
 - **`load_context()` 가 6-3 `feedback.db` 의 `load_user_preferences()` 를 호출**해 저장된

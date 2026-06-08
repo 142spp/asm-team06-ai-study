@@ -103,10 +103,21 @@ START -> analysis(pass-through) -> tool_selection -> conflict_check
 - LLM 보조 자리(미구현 `# TODO`): (a) Task 제목 유사도의 애매한 경계 판정, (b) modify 재검증.
 - 6-3 피드백 분석도 LLM 주 사용처이며, 그래프 흡수 시 `feedback_entry` 뒤에 연결한다.
 
-## 6. 외부 연동 (향후)
+## 6. 외부 연동 (Google Calendar / Tasks, 선택)
 
-- 현재 모든 Tool은 로컬 SQLite mock(`tools/local_tools.py`).
-- `create_calendar_event` 를 Google Calendar 등으로 대체 가능하나 현재 범위(로컬 데모) 밖.
+- Tool 정본은 로컬 SQLite(`tools/local_tools.py`). 그 위에 `tools/external.py` 푸시 훅을 얹었다.
+  `create_calendar_event`/`create_task` 가 로컬 저장 직후 외부로도 생성한다.
+- **켜고 끄기**: 키가 없으면 no-op(로컬만) -> 기본 데모/테스트 무변경. `.env` 에 OAuth 자격을
+  넣으면 자동 활성(`TOOL_EXTERNAL=off|google` 로 강제 가능). LLM seam(키 자동감지)과 같은 패턴.
+- **인증**: 서버 단일 계정(refresh token) 방식. 운영자가 한 번 발급해 `.env` 에 넣으면 백엔드가
+  access token 을 자동 갱신한다. 앱 사용자별 로그인이 없어 **FE 작업 불필요**. 발급법은
+  `backend/.env.example` 주석 참조(OAuth Playground 로 FE 없이 발급).
+- **호출**: `httpx` raw REST(의존성 0 추가). Calendar `events.insert`, Tasks `tasks.insert`.
+  Calendar/Tasks 는 같은 Google OAuth 자격으로 커버된다.
+- **실패 정책**: 외부 호출 실패는 WARNING 으로 삼키고 로컬 저장은 유지한다(데모가 외부 오류로
+  죽지 않게). `execution_node`/응답 스키마/계약 변경 없음.
+- **매핑**: `create_calendar_event` -> Google Calendar, `create_task` -> Google Tasks.
+  memo/risk 는 외부 대상이 없어 로컬만.
 
 ## 7. Checkpointer / 세션
 

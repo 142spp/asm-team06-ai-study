@@ -7,6 +7,7 @@ end-to-end 동작이 성립한다.
 from datetime import date
 
 from app.storage.db import get_conn
+from app.tools.external import try_push_calendar_event, try_push_task
 
 
 def _to_text(value) -> str | None:
@@ -30,7 +31,10 @@ def create_task(
             (title, assignee, _to_text(due_date), _to_text(priority)),
         )
         conn.commit()
-        return cur.lastrowid
+        pk = cur.lastrowid
+    # 로컬 저장 후 외부 연동(켜져 있을 때만, 실패해도 로컬은 유지).
+    try_push_task(title=title, assignee=assignee, due_date=due_date, priority=priority)
+    return pk
 
 
 def create_calendar_event(
@@ -48,7 +52,16 @@ def create_calendar_event(
             (title, _to_text(date), time, 1 if all_day else 0, duration_estimate),
         )
         conn.commit()
-        return cur.lastrowid
+        pk = cur.lastrowid
+    # 로컬 저장 후 외부 연동(켜져 있을 때만, 실패해도 로컬은 유지).
+    try_push_calendar_event(
+        title=title,
+        date_value=date,
+        time_value=time,
+        all_day=all_day,
+        duration_estimate=duration_estimate,
+    )
+    return pk
 
 
 def create_memo(title: str, content: str | None = None) -> int:

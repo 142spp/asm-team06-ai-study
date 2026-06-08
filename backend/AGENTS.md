@@ -12,7 +12,8 @@ FastAPI + LangGraph 기반 Action Router Agent 백엔드. backend 단독 uv 프�
 - `app/llm/` - Solar/FakeLLM 클라이언트. `UPSTAGE_API_KEY` 없으면 FakeLLM 폴백.
 - `app/schemas/` - Pydantic 모델. items(6-1 출력=6-2 입력 공통 정본) / analysis(6-1 내부 raw/Context/AnalyzeResult) / routing(Tool선택,충돌) / approval(승인,실행결과) / preference(6-3 후보,선택) = 도메인. run(=/run,/resume 전송) = 그래프 레이어.
 - `app/storage/` - SQLite(`storage.db`). db(스키마+경로훅) / seed(시연용,명시호출) / queries(조회).
-- `app/tools/` - Local Tool 함수 + `TOOL_REGISTRY`.
+- `app/tools/` - Tool 함수 + `TOOL_REGISTRY`. `local_tools`(SQLite 저장, 정본) +
+  `external`(Google Calendar/Tasks 푸시 훅, 키 있을 때만 동작/없으면 no-op).
 - `app/conflict/` - 규칙 기반 중복/충돌 검사(LLM 미사용).
 - `app/agent/` - 단일 LangGraph. state(AgentState) / nodes(analysis(pass-through), tool_selection, conflict_check, approval(1차 interrupt), execution, feedback_seam, feedback_analyze, preference(2차 interrupt+store)) / graph(MemorySaver+2단계 interrupt).
 - `app/api/routes/` - `analyze`(6-1 분석), `run`(`/run` 시작->interrupt, `/resume` 재개), `confirm`/`feedback`(6-3).
@@ -41,9 +42,22 @@ Tailscale 등 추가 origin은 `.env`의 `ACTION_ROUTER_CORS_ORIGINS`에 쉼표 
 HITL은 LangGraph `interrupt()`+MemorySaver(thread_id=session_id)로, `/run`(정지) -> `/resume`(재개)로 표현한다.
 시연용 기존 데이터는 `POST /mock/seed` 로 명시 초기화한다(일반 경로 자동 실행 없음).
 
+### 외부 연동(선택, Google Calendar/Tasks)
+
+`create_calendar_event`/`create_task` 는 로컬 저장 후 `app/tools/external.py` 훅으로 Google
+Calendar/Tasks 에도 푸시한다. 키가 없으면 no-op 이라 기본 로컬 데모/테스트는 그대로다.
+켜려면 `.env` 에 OAuth 자격(서버 단일 계정, refresh token)을 넣는다. 변수 정본은
+`backend/.env.example` 참조. 동작/발급법은 `docs/agent-design.md` 6장.
+- `TOOL_EXTERNAL=google|off` (미설정이면 `GOOGLE_REFRESH_TOKEN` 유무로 자동 판단)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN`
+- `GOOGLE_CALENDAR_ID`(기본 `primary`) / `GOOGLE_TASKLIST_ID`(기본 `@default`)
+외부 실패는 WARNING 으로 삼키고 로컬 저장은 유지한다(데모가 외부 오류로 죽지 않게). FE 변경 없음.
+
 ## 의존성 정책
 
 - 현재 의존성: `fastapi[standard]`, `langgraph`, `langchain-upstage`, `pydantic`.
+- 외부 연동은 `fastapi[standard]` 에 포함된 `httpx` 로 raw REST 호출한다(의존성 0 추가,
+  google SDK 미사용).
 - dev 의존성: `pytest`.
 - `langchain-upstage`가 의존하는 `tokenizers==0.20.3` 빌드/휠 호환성 때문에 Python은 3.12 계열(`>=3.12,<3.13`)로 제한한다.
 

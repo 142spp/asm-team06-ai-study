@@ -12,6 +12,7 @@ package-lock.json
 
 # env
 .env*
+!.env.example
 
 # 로컬 저장소(데모용)
 *.db
