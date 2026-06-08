@@ -43,7 +43,15 @@
   비어있던 `load_context()` 만 채웠다.
 - **선호 로드 실패는 분석을 막지 않는다**: DB 오류 시 빈 선호로 폴백(WARNING 로그)하고
   분석을 계속 진행한다. 선호가 실제로 주입될 때만 INFO 로그(시연 영상용 분기 기록).
-- **범위**: Guideline(D4)/기존 항목 요약, `_postprocess` 코드 후보정은 여전히 M3 예약(stub 유지).
+- **후속(같은 브랜치에서 구현 완료)**: 기존 항목 요약 주입, Guideline(D4) JSON 주입,
+  `_postprocess` 선호 코드 보정까지 이어서 채웠다. Context Loader stub 전반이 실데이터로 연결됨.
+
+## 2026-06-08 - _postprocess 선호 코드 보정(이중 안전장치)
+
+- LLM 출력(`AnalyzeResult.items`)을 코드가 한 번 더 검사해 저장된 선호대로 강제 치환한다.
+  프롬프트 주입(D3)은 확률적이라 가끔 무시되므로, 코드 후보정으로 결정적 보장을 더한다.
+- 필드값은 `model_dump(mode="json")` 기준으로 비교/치환하고 `Item.model_validate` 로 재검증해
+  date/enum 타입을 강제한다(model_copy 의 무검증 치환 회피).
 
 ## 미해결
 

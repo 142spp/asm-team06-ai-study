@@ -125,14 +125,45 @@ def load_context() -> ContextBundle:
 
 
 def _postprocess(result: AnalyzeResult, context: ContextBundle) -> AnalyzeResult:
-    """선호·지침 2차 재보정 (M3에서 구현). 지금은 통과."""
+    """선호 2차 재보정.
+
+    선호를 프롬프트로 LLM에 알려주는 것(D3)과 별개로, LLM 출력 결과를 코드가 한 번 더 검사해
+    선호대로 강제 치환한다(LLM은 확률적이라 프롬프트 지시를 가끔 무시 -> 결정적 보장).
+    필드값은 직렬화(mode=json) 기준으로 비교/치환하고, 치환 후 재검증으로 타입을 강제한다.
+    """
+    prefs = context.preferences
+    if not prefs:
+        logger.debug(
+            "Postprocess pass-through (no prefs): %s",
+            summarize_items([item.model_dump() for item in result.items]),
+        )
+        return result
+
+    items: list[Item] = []
+    changed = 0
+    for item in result.items:
+        dump = item.model_dump(mode="json")
+        applied = False
+        for pref in prefs:
+            field = pref.get("field")
+            if field in dump and dump[field] == pref.get("original_pattern"):
+                dump[field] = pref.get("preferred")
+                applied = True
+        if applied:
+            changed += 1
+            items.append(Item.model_validate(dump))  # 재검증으로 타입(date/enum) 강제
+        else:
+            items.append(item)
+
+    if changed:
+        logger.info("Postprocess: %d item(s) corrected by preference", changed)
     logger.debug(
-        "Postprocess pass-through: %s prefs=%d guidelines=%d",
-        summarize_items([item.model_dump() for item in result.items]),
-        len(context.preferences),
+        "Postprocess done: changed=%d prefs=%d guidelines=%d",
+        changed,
+        len(prefs),
         len(context.guidelines),
     )
-    return result
+    return AnalyzeResult(items=items)
 
 
 def analyze(*, raw_text: str, base_date: str, llm: LLMClient | None = None) -> AnalyzeResult:

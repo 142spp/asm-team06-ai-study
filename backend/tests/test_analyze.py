@@ -6,11 +6,12 @@
 from datetime import date
 
 from app.analysis.completeness import finalize_item
-from app.analysis.pipeline import analyze, load_context
+from app.analysis.pipeline import _postprocess, analyze, load_context
 from app.feedback.db import save_user_preference
 from app.llm.fake import FakeLLM
 from app.llm.solar import _extract_json
-from app.schemas.analysis import ContextBundle, LLMItem, LLMOutput
+from app.schemas.analysis import AnalyzeResult, ContextBundle, Item, LLMItem, LLMOutput
+from app.schemas.items import ItemType, Priority
 
 BASE = "2026-06-05"
 
@@ -262,6 +263,41 @@ def test_load_context_guidelines_empty_on_broken_json(tmp_path, monkeypatch):
     p.write_text("{ broken json", encoding="utf-8")
     monkeypatch.setattr("app.analysis.pipeline._GUIDELINES_PATH", p)
     assert load_context().guidelines == []
+
+
+def test_postprocess_applies_preference_override():
+    # 선호 패턴과 일치하는 필드를 코드가 강제 치환(LLM이 안 따랐을 때의 이중 안전장치).
+    item = Item(id="item-0", type=ItemType.task, title="발표자료", assignee="성종")
+    ctx = ContextBundle(
+        preferences=[{"field": "assignee", "original_pattern": "성종", "preferred": "박성종"}]
+    )
+    out = _postprocess(AnalyzeResult(items=[item]), ctx)
+    assert out.items[0].assignee == "박성종"
+
+
+def test_postprocess_no_change_when_pattern_mismatch():
+    item = Item(id="item-0", type=ItemType.task, title="발표자료", assignee="우태")
+    ctx = ContextBundle(
+        preferences=[{"field": "assignee", "original_pattern": "성종", "preferred": "박성종"}]
+    )
+    out = _postprocess(AnalyzeResult(items=[item]), ctx)
+    assert out.items[0].assignee == "우태"
+
+
+def test_postprocess_pass_through_without_preferences():
+    item = Item(id="item-0", type=ItemType.task, title="x", assignee="성종")
+    out = _postprocess(AnalyzeResult(items=[item]), ContextBundle())
+    assert out.items[0].assignee == "성종"
+
+
+def test_postprocess_applies_enum_preference_with_type_coercion():
+    # priority(enum) 선호도 직렬화 비교 + 재검증으로 타입이 강제된다.
+    item = Item(id="item-0", type=ItemType.task, title="x", priority=Priority.medium)
+    ctx = ContextBundle(
+        preferences=[{"field": "priority", "original_pattern": "medium", "preferred": "high"}]
+    )
+    out = _postprocess(AnalyzeResult(items=[item]), ctx)
+    assert out.items[0].priority == Priority.high
 
 
 if __name__ == "__main__":
