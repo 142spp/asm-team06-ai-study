@@ -60,6 +60,9 @@ _SYSTEM = """너는 비정형 텍스트에서 실행 항목을 뽑아 분류하�
   대응 방안을 별도 task로 만들지 말고 그 risk 항목의 mitigation 에 넣는다.
   대응 방안이 없으면 mitigation=null. (risk 외 유형은 mitigation=null)
 - 한 입력에 여러 항목이 섞이면 독립 항목으로 분해한다.
+- User Preference 가 주어지면, 같은 field 에서 입력이 그 original_pattern 에 해당하는
+  상황일 때 사용자가 과거에 선택한 preferred 값을 기본값으로 반영한다.
+  단, 입력에 명시적으로 다른 값이 있으면 입력을 우선한다.
 - 실행 항목이 전혀 없으면 items=[] (빈 배열)."""
 
 

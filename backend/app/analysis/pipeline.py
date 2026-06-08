@@ -7,6 +7,7 @@ planning.md: 검증 실패 시 1회 재시도, 그래도 실패하면 분석 실
 from datetime import date, timedelta
 
 from app.analysis.completeness import finalize
+from app.feedback.db import load_user_preferences
 from app.llm.base import LLMClient, get_llm
 from app.logging_config import (
     compact_text,
@@ -31,12 +32,24 @@ _KOREAN_WEEKDAYS = {
 
 
 def load_context() -> ContextBundle:
-    """Context Loader (M1 stub).
+    """Context Loader.
 
-    M3에서 6-3의 feedback.db `load_user_preferences()`를 재사용해 선호를 채우고(D3),
-    Guideline Store(D4)·기존 항목 요약을 붙인다. 지금은 빈 컨텍스트.
+    6-3의 feedback.db `load_user_preferences()`로 저장된 선호를 재주입한다(D3).
+    선호 로드가 실패해도 분석 자체는 막지 않는다(빈 선호로 폴백).
+    Guideline Store(D4)·기존 항목 요약은 M3에서 채운다(지금은 빈 값).
     """
-    context = ContextBundle()
+    try:
+        preferences = load_user_preferences()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Preference load failed, fallback to empty: %s: %s",
+            exc.__class__.__name__,
+            exc,
+        )
+        preferences = []
+    context = ContextBundle(preferences=preferences)
+    if preferences:
+        logger.info("Context loaded: re-injecting %d saved preference(s)", len(preferences))
     logger.debug(
         "Context loaded: prefs=%d guidelines=%d existing_summary_len=%d",
         len(context.preferences),

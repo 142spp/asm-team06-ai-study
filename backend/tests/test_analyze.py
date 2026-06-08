@@ -6,7 +6,8 @@
 from datetime import date
 
 from app.analysis.completeness import finalize_item
-from app.analysis.pipeline import analyze
+from app.analysis.pipeline import analyze, load_context
+from app.feedback.db import save_user_preference
 from app.llm.fake import FakeLLM
 from app.llm.solar import _extract_json
 from app.schemas.analysis import ContextBundle, LLMItem, LLMOutput
@@ -191,9 +192,47 @@ def test_vague_date_does_not_keep_invented_date():
     assert r.items[0].needs_confirmation is True
 
 
+def test_load_context_empty_when_no_saved_preferences():
+    # 저장된 선호가 없으면 빈 컨텍스트 (autouse fixture 가 feedback.db 를 tmp 로 격리).
+    context = load_context()
+    assert context.preferences == []
+
+
+def test_load_context_reinjects_saved_preferences():
+    # 저장 -> load_context 가 그 선호를 다시 끌어와 ContextBundle.preferences 에 채운다.
+    save_user_preference(field="date", original_pattern="vague", preferred="pending")
+    save_user_preference(field="assignee", original_pattern="성종", preferred="박성종")
+
+    context = load_context()
+
+    by_field = {p["field"]: p for p in context.preferences}
+    assert by_field["date"]["original_pattern"] == "vague"
+    assert by_field["date"]["preferred"] == "pending"
+    assert by_field["assignee"]["preferred"] == "박성종"
+
+
+def test_load_context_falls_back_to_empty_on_db_error(monkeypatch):
+    # 선호 로드가 실패해도 분석은 막지 않는다 (빈 선호 폴백).
+    def _boom():
+        raise RuntimeError("db unavailable")
+
+    monkeypatch.setattr("app.analysis.pipeline.load_user_preferences", _boom)
+    context = load_context()
+    assert context.preferences == []
+
+
 if __name__ == "__main__":
+    import inspect
+
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    ran = 0
     for fn in fns:
+        # load_context 선호 테스트는 pytest fixture(tmp DB 격리/monkeypatch)에 의존하므로
+        # 직접 실행 시 실제 feedback.db 를 오염시키지 않도록 건너뛴다.
+        if inspect.signature(fn).parameters or "load_context" in fn.__name__:
+            print(f"SKIP {fn.__name__} (needs pytest fixtures)")
+            continue
         fn()
+        ran += 1
         print(f"PASS {fn.__name__}")
-    print(f"\n{len(fns)} passed")
+    print(f"\n{ran} passed")
