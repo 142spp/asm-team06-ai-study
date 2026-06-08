@@ -243,6 +243,27 @@ def test_load_context_summary_empty_on_storage_error(monkeypatch):
     assert load_context().existing_items_summary == ""
 
 
+def test_load_context_reads_guidelines_json(tmp_path, monkeypatch):
+    # guidelines.json을 읽어 ContextBundle.guidelines에 채운다.
+    p = tmp_path / "guidelines.json"
+    p.write_text('[{"rule": "테스트 지침"}]', encoding="utf-8")
+    monkeypatch.setattr("app.analysis.pipeline._GUIDELINES_PATH", p)
+    guidelines = load_context().guidelines
+    assert any(g.get("rule") == "테스트 지침" for g in guidelines)
+
+
+def test_load_context_guidelines_empty_when_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.analysis.pipeline._GUIDELINES_PATH", tmp_path / "nope.json")
+    assert load_context().guidelines == []
+
+
+def test_load_context_guidelines_empty_on_broken_json(tmp_path, monkeypatch):
+    p = tmp_path / "guidelines.json"
+    p.write_text("{ broken json", encoding="utf-8")
+    monkeypatch.setattr("app.analysis.pipeline._GUIDELINES_PATH", p)
+    assert load_context().guidelines == []
+
+
 if __name__ == "__main__":
     import inspect
 

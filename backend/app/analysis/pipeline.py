@@ -4,7 +4,9 @@ Context Loader → (1 LLM 호출) → Pydantic 검증(1회 재시도) → 선호
 planning.md: 검증 실패 시 1회 재시도, 그래도 실패하면 분석 실패 + 원문을 Pending으로.
 """
 
+import json
 from datetime import date, timedelta
+from pathlib import Path
 
 from app.analysis.completeness import finalize
 from app.feedback.db import load_user_preferences
@@ -20,6 +22,9 @@ from app.schemas.analysis import AnalyzeResult, ContextBundle, Item, LLMOutput
 from app.schemas.items import ItemType, ToolName
 
 logger = get_logger("analysis.pipeline")
+
+# 분석 지침(D4). Store 풀구축 대신 JSON 파일로 주입한다(없으면 빈 지침).
+_GUIDELINES_PATH = Path(__file__).parent.parent.parent / "guidelines.json"
 
 _KOREAN_WEEKDAYS = {
     "월요일": 0, "월": 0,
@@ -62,12 +67,31 @@ def _summarize_existing(limit: int = 10) -> str:
     return " / ".join(parts)
 
 
+def _load_guidelines() -> list[dict]:
+    """guidelines.json(있으면)을 읽어 분석 지침(D4)으로 주입한다.
+
+    파일이 없거나 깨졌으면 빈 지침으로 폴백한다(분석을 막지 않음). JSON 최상위는 dict 배열.
+    """
+    try:
+        with open(_GUIDELINES_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return []
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Guidelines load failed, skip: %s: %s", exc.__class__.__name__, exc)
+        return []
+    if not isinstance(data, list):
+        logger.warning("Guidelines must be a JSON array, got %s", type(data).__name__)
+        return []
+    return [d for d in data if isinstance(d, dict)]
+
+
 def load_context() -> ContextBundle:
     """Context Loader.
 
     6-3의 feedback.db `load_user_preferences()`로 저장된 선호를 재주입하고(D3),
-    저장소의 기존 항목 요약을 붙인다. 각 로드가 실패해도 분석 자체는 막지 않는다(빈 값 폴백).
-    Guideline Store(D4)는 별도로 채운다.
+    저장소의 기존 항목 요약과 분석 지침(D4, guidelines.json)을 붙인다.
+    각 로드가 실패해도 분석 자체는 막지 않는다(빈 값 폴백).
     """
     try:
         preferences = load_user_preferences()
@@ -79,11 +103,16 @@ def load_context() -> ContextBundle:
         )
         preferences = []
     existing_summary = _summarize_existing()
+    guidelines = _load_guidelines()
     context = ContextBundle(
-        preferences=preferences, existing_items_summary=existing_summary
+        preferences=preferences,
+        guidelines=guidelines,
+        existing_items_summary=existing_summary,
     )
     if preferences:
         logger.info("Context loaded: re-injecting %d saved preference(s)", len(preferences))
+    if guidelines:
+        logger.info("Context loaded: %d guideline(s)", len(guidelines))
     if existing_summary:
         logger.info("Context loaded: existing-items summary len=%d", len(existing_summary))
     logger.debug(
