@@ -26,3 +26,4 @@ package-lock.json
 
 *.pptx
 .ppt-work
+client_secret*
