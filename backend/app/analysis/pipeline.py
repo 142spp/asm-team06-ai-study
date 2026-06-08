@@ -6,8 +6,6 @@ planning.md: 검증 실패 시 1회 재시도, 그래도 실패하면 분석 실
 
 from datetime import date, timedelta
 
-from pydantic import ValidationError
-
 from app.analysis.completeness import finalize
 from app.llm.base import LLMClient, get_llm
 from app.logging_config import (
@@ -93,9 +91,12 @@ def _call_with_retry(
             output = LLMOutput.model_validate(raw)
             logger.info("LLM attempt %d/%d validated: %s", attempt, attempts, summarize_items(output.items))
             return output
-        except (ValidationError, ValueError, KeyError) as exc:
+        except Exception as exc:  # noqa: BLE001
+            # 검증 실패(ValidationError/ValueError/KeyError)뿐 아니라 네트워크/Solar API
+            # 오류(httpx/upstage 등)도 잡아 재시도하고, 끝내 실패하면 None 을 돌려
+            # 호출부가 _analysis_failed(Pending 저장)로 폴백하게 한다(500 방지).
             logger.warning(
-                "LLM attempt %d/%d failed validation: %s: %s",
+                "LLM attempt %d/%d failed: %s: %s",
                 attempt,
                 attempts,
                 exc.__class__.__name__,
