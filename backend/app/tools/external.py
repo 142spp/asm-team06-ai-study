@@ -20,7 +20,7 @@ Bearer 로 Calendar/Tasks API 를 호출한다. Calendar 와 Tasks 는 같은 Go
 
 import os
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import httpx
 
@@ -298,15 +298,24 @@ def task_to_local(t: dict) -> dict:
 def fetch_calendar_events(max_results: int = 250) -> list[dict]:
     """구글 캘린더 기존 일정을 로컬 형식으로 가져온다(충돌 검사용).
 
+    `timeMin`(어제~)을 주어 가까운 과거~미래 일정을 가져온다. timeMin 없이 orderBy=startTime
+    이면 먼 과거(반복 생일 등)부터 채워 정작 충돌 대상인 미래 일정이 maxResults 밖으로 잘린다.
     외부 off 또는 실패 시 빈 list 를 돌려 로컬만으로 검사를 계속한다(read 폴백).
     """
     if not external_enabled():
         return []
     calendar_id = os.getenv("GOOGLE_CALENDAR_ID", "primary")
+    # 충돌 대상은 보통 미래 일정. 어제부터 조회해 오늘 일정도 포함한다.
+    time_min = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     try:
         data = _get(
             _CALENDAR_URL.format(calendar_id=calendar_id),
-            params={"singleEvents": "true", "orderBy": "startTime", "maxResults": max_results},
+            params={
+                "singleEvents": "true",
+                "orderBy": "startTime",
+                "maxResults": max_results,
+                "timeMin": time_min,
+            },
         )
         events = [calendar_event_to_local(e) for e in data.get("items", [])]
         logger.info("외부 연동: Google Calendar 기존 일정 %d건 조회", len(events))

@@ -57,8 +57,11 @@
 - **테스트 격리(중요)**: `.env` 에 토큰을 넣으면 `main.py` load_dotenv 로 그 값이 테스트에도 로드되어
   conflict_check(읽기)/execution(쓰기)이 실제 구글 API 를 호출(네트워크 의존 + 실제 캘린더 변경)했다.
   `conftest.py` autouse fixture 로 모든 테스트에서 `TOOL_EXTERNAL=off` 강제(외부 자체 테스트만 자체 제어).
+- **events.list timeMin**: `fetch_calendar_events` 는 `timeMin`(어제~)으로 조회한다. timeMin 없이
+  orderBy=startTime 이면 먼 과거의 반복 일정(생일 등)이 maxResults 를 채워 정작 충돌 대상인 미래
+  일정이 잘린다(실제 e2e 검증에서 발견). 어제부터 조회해 오늘/미래 일정을 충돌 검사에 포함한다.
 - **한계**: 구글 timed 이벤트 시각은 offset 의 로컬 표기를 그대로 사용(KST 가정). 다른 timezone 의
-  외부 이벤트 정확 환산, events.list 시간범위 최적화는 데모 범위 밖.
+  외부 이벤트 정확 환산, item 날짜 기준 timeMax 범위 최적화는 데모 범위 밖.
 
 ## 2026-06-08 - 저장된 선호 재주입(D3) 연결
 
