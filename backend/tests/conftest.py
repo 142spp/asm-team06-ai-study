@@ -23,6 +23,18 @@ def isolate_6_3_db(tmp_path, monkeypatch):
     monkeypatch.setattr("app.preferences.store._DB_PATH", tmp_path / "preferences.db")
 
 
+@pytest.fixture(autouse=True)
+def disable_external_tools(monkeypatch):
+    """테스트에서 외부 연동(구글 Calendar/Tasks)을 강제 OFF (모든 테스트 자동 적용).
+
+    main.py 의 load_dotenv 로 .env 의 GOOGLE_* 토큰이 로드되면 conflict_check(읽기)와
+    execution(쓰기)이 실제 구글 API 를 호출한다(네트워크 의존 + 실제 캘린더 변경). 테스트는
+    off 로 막아 로컬만 검증한다. 외부 연동 자체 테스트(test_external_tools.py)는 자체 fixture 로
+    이 값을 덮어 제어한다.
+    """
+    monkeypatch.setenv("TOOL_EXTERNAL", "off")
+
+
 @pytest.fixture
 def tmp_db(tmp_path):
     """테스트별 tmp SQLite DB 경로를 주입한다."""
