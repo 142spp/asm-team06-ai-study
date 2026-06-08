@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from app.analysis.completeness import finalize
 from app.feedback.db import load_user_preferences
 from app.llm.base import LLMClient, get_llm
+from app.storage.queries import load_calendar_events, load_tasks
 from app.logging_config import (
     compact_text,
     get_logger,
@@ -31,12 +32,42 @@ _KOREAN_WEEKDAYS = {
 }
 
 
+def _summarize_existing(limit: int = 10) -> str:
+    """저장소의 기존 일정/할일을 LLM 프롬프트용 요약 문자열로 만든다.
+
+    LLM이 "이미 비슷한 일정/할일이 있다"를 알고 중복 생성을 피하거나 맥락에 맞게 분류하도록
+    돕는다. 조회 실패(미초기화 DB 등)는 빈 문자열로 폴백해 분석을 막지 않는다.
+    """
+    try:
+        events = load_calendar_events()
+        tasks = load_tasks()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Existing-items load failed, skip summary: %s: %s", exc.__class__.__name__, exc
+        )
+        return ""
+    parts: list[str] = []
+    if events:
+        ev = "; ".join(
+            f"{e.get('date') or '날짜미정'} {e.get('time') or ''} {e.get('title', '')}".strip()
+            for e in events[:limit]
+        )
+        parts.append(f"기존 일정: {ev}")
+    if tasks:
+        tk = "; ".join(
+            f"{t.get('title', '')}(담당 {t.get('assignee') or '미정'}, 마감 {t.get('due_date') or '미정'})"
+            for t in tasks[:limit]
+        )
+        parts.append(f"기존 할일: {tk}")
+    return " / ".join(parts)
+
+
 def load_context() -> ContextBundle:
     """Context Loader.
 
-    6-3의 feedback.db `load_user_preferences()`로 저장된 선호를 재주입한다(D3).
-    선호 로드가 실패해도 분석 자체는 막지 않는다(빈 선호로 폴백).
-    Guideline Store(D4)·기존 항목 요약은 M3에서 채운다(지금은 빈 값).
+    6-3의 feedback.db `load_user_preferences()`로 저장된 선호를 재주입하고(D3),
+    저장소의 기존 항목 요약을 붙인다. 각 로드가 실패해도 분석 자체는 막지 않는다(빈 값 폴백).
+    Guideline Store(D4)는 별도로 채운다.
     """
     try:
         preferences = load_user_preferences()
@@ -47,9 +78,14 @@ def load_context() -> ContextBundle:
             exc,
         )
         preferences = []
-    context = ContextBundle(preferences=preferences)
+    existing_summary = _summarize_existing()
+    context = ContextBundle(
+        preferences=preferences, existing_items_summary=existing_summary
+    )
     if preferences:
         logger.info("Context loaded: re-injecting %d saved preference(s)", len(preferences))
+    if existing_summary:
+        logger.info("Context loaded: existing-items summary len=%d", len(existing_summary))
     logger.debug(
         "Context loaded: prefs=%d guidelines=%d existing_summary_len=%d",
         len(context.preferences),

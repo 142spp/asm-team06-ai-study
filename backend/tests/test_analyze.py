@@ -221,6 +221,28 @@ def test_load_context_falls_back_to_empty_on_db_error(monkeypatch):
     assert context.preferences == []
 
 
+def test_load_context_includes_existing_items_summary(tmp_db):
+    # 저장소의 기존 일정/할일이 요약 문자열로 프롬프트 컨텍스트에 들어간다.
+    from app.tools.local_tools import create_calendar_event, create_task
+
+    create_calendar_event("팀 회의", date(2026, 6, 12), "10:00")
+    create_task("API 테스트 정리", assignee="동근", due_date=date(2026, 6, 6))
+
+    summary = load_context().existing_items_summary
+    assert "팀 회의" in summary
+    assert "API 테스트 정리" in summary
+    assert "동근" in summary
+
+
+def test_load_context_summary_empty_on_storage_error(monkeypatch):
+    # 저장소 조회 실패 시 요약은 빈 문자열(분석 계속).
+    def _boom():
+        raise RuntimeError("storage unavailable")
+
+    monkeypatch.setattr("app.analysis.pipeline.load_calendar_events", _boom)
+    assert load_context().existing_items_summary == ""
+
+
 if __name__ == "__main__":
     import inspect
 
