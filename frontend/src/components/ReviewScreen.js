@@ -49,12 +49,11 @@ export default function ReviewScreen({ result, onDone }) {
 
             <Card>
                 <SummaryBar>
-                    <SummaryLeft>
-                        <TypeBadge type="input">회의록</TypeBadge>
-                        <SummaryText>
-                            실행 항목 <b>{items.length}</b>개 분해됨 · 충돌 {conflictCount} · 확인 필요 {needsConfirmCount}
-                        </SummaryText>
-                    </SummaryLeft>
+                    <SummaryText>
+                        실행 항목 <b>{items.length}</b>개 분해됨
+                        {conflictCount > 0 && ` · 충돌 ${conflictCount}`}
+                        {needsConfirmCount > 0 && ` · 확인 필요 ${needsConfirmCount}`}
+                    </SummaryText>
                     <Btn $primary onClick={handleApproveAll}>✓ 전체 승인</Btn>
                 </SummaryBar>
 
